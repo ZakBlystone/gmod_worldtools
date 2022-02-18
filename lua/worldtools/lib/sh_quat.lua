@@ -404,7 +404,7 @@ end
 
 function quat:RotateVector(v)
 
-	local vn = v:GetNormal()
+	local vn = v:GetNormalized()
 	local vq = Quaternion(vn.x, vn.y, vn.z)
 
 	local conjugate = self:Conjugate()

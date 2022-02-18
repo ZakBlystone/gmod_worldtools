@@ -25,6 +25,13 @@ function meta:Dot(vec, w)
 
 end
 
+function meta:GetNormalized()
+
+	local len = 1 / math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+	return Vector4( self.x * len, self.y * len, self.z * len, self.w )
+
+end
+
 local meta = {}
 meta.__index = meta
 
@@ -33,6 +40,12 @@ function TexMatrix(s, t) return setmetatable({ s = s, t = t }, meta) end
 function meta:GetUV(vec)
 
 	return self.s:Dot(vec), self.t:Dot(vec)
+
+end
+
+function meta:GetNormalized()
+
+	return TexMatrix(self.s:GetNormalized(), self.t:GetNormalized())
 
 end
 

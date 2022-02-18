@@ -61,6 +61,7 @@ local function createBrushMesh(material, brushes)
 	-- Update the current mesh
 	local bmesh = wt_mesh.ManagedMesh(material)
 	local vertices = {}
+	local texScale = 16
 
 	-- Add vertices for every side
 	local to_brush = Vector() --brush.center
@@ -71,7 +72,11 @@ local function createBrushMesh(material, brushes)
 			local texinfo = side.texinfo
 			local texdata = texinfo.texdata
 			side.winding:Move( to_brush )
-			side.winding:EmitMesh(texinfo.textureVecs, texinfo.lightmapVecs, texdata.width, texdata.height, -to_brush, vertices)
+			side.winding:EmitMesh(
+				texinfo.textureVecs:GetNormalized(), 
+				texinfo.lightmapVecs:GetNormalized(), 
+				texScale, 
+				texScale, -to_brush, vertices)
 			side.winding:Move( -to_brush )
 		end
 	end
@@ -137,17 +142,6 @@ function meta:Init( ent, indexTable )
 	self.outputs = {}
 	self.inputs = {}
 
-	self.real = nil
-
-	if ent.model ~= nil and ent.model[1] == "*" then
-		for _,v in ipairs(ents.GetAll()) do
-			if v:GetModel() == ent.model and not v.JazzBrushMesh then
-				self.real = v
-				break
-			end
-		end
-	end
-
 	self:BuildBrushModel()
 	return self
 
@@ -177,19 +171,19 @@ function meta:BuildBrushModel()
 			end
 		end
 
-		modelent.JazzBrushMesh = createBrushMesh(brushMaterial, brushes)
-		modelent.JazzBrushMaterial = brushMaterial
-		modelent.JazzBrushMatrix = Matrix()
+		modelent.IOBrushMesh = createBrushMesh(brushMaterial, brushes)
+		modelent.IOBrushMaterial = brushMaterial
+		modelent.IOBrushMatrix = Matrix()
 
 		function modelent:RenderOverride()
 
-			local mtx = self.JazzBrushMatrix
+			local mtx = self.IOBrushMatrix
 			mtx:SetTranslation(self:GetPos() )
 			mtx:SetAngles(self:GetAngles() )
 			cam.PushModelMatrix(mtx)
-				render.SetMaterial(self.JazzBrushMaterial)
+				render.SetMaterial(self.IOBrushMaterial)
 				render.SetColorModulation(1, 1, 1)
-				self.JazzBrushMesh:Draw()
+				self.IOBrushMesh:Draw()
 			cam.PopModelMatrix()
 
 		end
@@ -205,16 +199,17 @@ function meta:GetName() return self.name or "<" .. self:GetClass() .. ">" end
 function meta:GetClass() return self.classname or "__unknown__" end
 function meta:GetOutputs() return self.outputs end
 function meta:GetInputs() return self.inputs end
-function meta:GetEntity() return ents.GetMapCreatedEntity(self:GetIndex()+1234) end
+function meta:GetEntity() return ents.GetMapCreatedEntity(self.index+1234) end
 
 function meta:Draw()
 
 	if self.model then
 
 		--if self.ent.classname == "func_movelinear" then
-		if IsValid(self.real) then
-			self.model:SetPos( self.real:GetPos() )
-			self.model:SetAngles( self.real:GetAngles() )
+		local real = self:GetEntity()
+		if IsValid(real) then
+			self.model:SetPos( real:GetPos() )
+			self.model:SetAngles( real:GetAngles() )
 		end
 		--end
 		self.model:DrawModel()

@@ -276,7 +276,7 @@ AddProcess( "Converting Entities", function( data )
 	sm[sm.none .. sm.string] = match("\"")
 	sm[sm.string .. sm.none] = match("\"")
 
-	sm2.object.enter = function(ch) obj = {} end
+	sm2.object.enter = function(ch) obj = { index = (#out+1) } end
 	sm2.object.tick = function(ch) sm(ch) end
 	sm2.object.exit = function(ch) table.insert( out, obj ) end
 	sm2[sm2.none .. sm2.object] = match("{") - smstate( sm.string )
@@ -295,6 +295,7 @@ end )
 
 AddProcess( "Creating IO Graph", function( data )
 
+	if CLIENT then wt_ioindexing.RequestIDs() end
 	data.iograph = wt_iograph.New(data)
 	data.ioworld = wt_ioworld.New(data.iograph)
 
@@ -525,7 +526,7 @@ function LoadBSP( bsp, path, lumps, callback )
 
 end
 
---if CLIENT then _G["LOADED_BSP"] = nil end
+if CLIENT then WT_LOADED_BSP = nil end
 if WT_LOADED_BSP == nil then
 	if SERVER then
 		--LoadBSP(game.GetMap())

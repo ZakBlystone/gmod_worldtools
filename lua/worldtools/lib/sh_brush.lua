@@ -288,7 +288,7 @@ end
 hook.Add( "PostDrawOpaqueRenderables", "BrushLibTest", function(depth, sky)
 
 	local dist = math.cos(CurTime()/4) * 180
-	local front, back = testBrush:Split( Plane( Vector(1,1,1):GetNormal() , dist) )
+	local front, back = testBrush:Split( Plane( Vector(1,1,1):GetNormalized() , dist) )
 
 	--testBrush:Render()
 

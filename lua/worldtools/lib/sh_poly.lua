@@ -513,7 +513,7 @@ local lightmapTex = nil
 
 -- Generate a single half-lit lightmap for now
 if CLIENT then
-	local lightmaprt = wt_irt.New("jazz_snatch_lightmaptex", 64, 64)
+	local lightmaprt = wt_irt.New("io_lightmaptex_half", 64, 64)
 	lightmapTex = lightmaprt:GetTarget()
 	lightmaprt:Render(function() render.Clear(12, 12, 12, 255) end )
 end

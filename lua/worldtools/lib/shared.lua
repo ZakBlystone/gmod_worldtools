@@ -19,6 +19,7 @@ include("sh_bsptypes.lua")
 
 -- Needs to load before bsp
 include("io/sh_iocommon.lua")
+include("io/sh_ioindexing.lua")
 include("io/sh_ionode.lua")
 include("io/sh_iograph.lua")
 include("io/sh_ionet.lua")

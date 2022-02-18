@@ -145,6 +145,7 @@ if CLIENT then
 	local trace_draw_flashes = G_IOTRACE_META.DrawFlashes
 	local trace_draw_blips = G_IOTRACE_META.DrawBlips
 	local vray_result = Vector()
+	local cull_distance = 600
 
 	function meta:Draw()
 
@@ -157,13 +158,13 @@ if CLIENT then
 		render.OverrideColorWriteEnable(true, false)
 		render.SetMaterial( Material("metal2") )
 		render.CullMode(MATERIAL_CULLMODE_CW)
-		render.DrawSphere( eye, 300, 50, 50, Color(0,255,255,255) )
+		render.DrawSphere( eye, cull_distance, 50, 50, Color(0,255,255,255) )
 		render.CullMode(MATERIAL_CULLMODE_CCW)
 		render.OverrideColorWriteEnable(false, false)
 
 		render.SetMaterial(lasermat)
 		for k, trace in ipairs(self.traces) do
-			trace_draw(trace)
+			trace_draw(trace, cull_distance)
 		end
 
 		for ent in self.graph:Ents() do
@@ -175,7 +176,7 @@ if CLIENT then
 		render.ClearDepth()
 		render.SetMaterial(lasermat)
 		for k, trace in ipairs(self.traces) do
-			trace_draw_flashes(trace)
+			trace_draw_flashes(trace, cull_distance)
 		end
 
 		render.SetMaterial(flaremat)
@@ -192,7 +193,7 @@ if CLIENT then
 				local v = point.pos + point.normal * along
 				--print(t)
 				render.SetMaterial(lasermat)
-				hitTrace:Draw(Color(200,210,255), 15, point.along + along - 30, point.along + along + 30)
+				hitTrace:Draw(cull_distance, Color(200,210,255), 15, point.along + along - 30, point.along + along + 30)
 				--hitTrace:Draw( blip_color, 10, t - 30, t + 30 )
 
 				--render.DrawLine(Vector(0,0,0), v)
@@ -306,7 +307,7 @@ if CLIENT then
 		if not ShouldDrawIOView() then return end
 
 		if wt_bsp.GetCurrent() == nil then print("NO BSP") return end
-		if wt_bsp.GetCurrent():IsLoading() then print("WAIT FOR LOAD") return end
+		if wt_bsp.GetCurrent():IsLoading() then return end
 		if space == nil then space = wt_bsp.GetCurrent().ioworld end
 
 		local w = ScrW()

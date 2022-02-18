@@ -64,7 +64,7 @@ function meta:BuildPath( direct )
 		self.points[#self.points+1] = {
 			pos = base,
 			dir = dir,
-			normal = dir:GetNormal(),
+			normal = dir:GetNormalized(),
 			binormal = Vector(0,0,1),
 			len = dirlen,
 			along = 0,
@@ -90,7 +90,7 @@ function meta:BuildPath( direct )
 			self.points[#self.points+1] = {
 				pos = base,
 				dir = dir,
-				normal = dir:GetNormal(),
+				normal = dir:GetNormalized(),
 				binormal = Vector(0,0,1),
 				len = dirlen,
 				along = length - dirlen,
@@ -396,11 +396,11 @@ if CLIENT then
 	local vma = Vector()
 	local sqrt = math.sqrt
 
-	function meta:Draw(color, width, t0, t1, nocull)
+	function meta:Draw(maxDist, color, width, t0, t1, nocull)
 
 		--if true then return end
 
-		local maxDist = 300
+		maxDist = maxDist or 300
 		local maxDistSqr = maxDist * maxDist
 		local eye = _G.G_EYE_POS
 
@@ -503,7 +503,7 @@ if CLIENT then
 
 	end
 
-	function meta:DrawFlashes()
+	function meta:DrawFlashes(maxDist)
 
 		for i=#self.blips, 1, -1 do
 
@@ -521,13 +521,13 @@ if CLIENT then
 				local flash = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
 				if flash > 0 then
 					local col = LerpColor(blip_color, Color(0,0,0,0), 1 - flash)
-					self:Draw( col, 8, nil, nil, true )
-					self:Draw( col, 16, nil, nil, true )
+					self:Draw( maxDist, col, 8, nil, nil, true )
+					self:Draw( maxDist, col, 16, nil, nil, true )
 				end
 
 			else
 
-				self:Draw( blip_color, 8, 0, (t / blip.duration) * self.length, true )
+				self:Draw( maxDist, blip_color, 8, 0, (t / blip.duration) * self.length, true )
 
 			end
 
