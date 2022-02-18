@@ -9,7 +9,7 @@ meta.__index = meta
 if CLIENT then
 
 	local function getToolTexture(texture)
-		return CreateMaterial("HackerTool_" .. texture, "UnlitGeneric", {
+		return CreateMaterial("io_brush_tooltex_" .. texture, "UnlitGeneric", {
 			["$basetexture"] = "tools/tools" .. texture,
 			["$vertexcolor"] = 1,
 			["$vertexalpha"] = 1,
@@ -141,6 +141,7 @@ function meta:Init( ent, indexTable )
 	self.index = indexTable[ent]
 	self.outputs = {}
 	self.inputs = {}
+	self.onMoved = {}
 
 	self:BuildBrushModel()
 	return self
@@ -193,13 +194,27 @@ function meta:BuildBrushModel()
 
 end
 
-function meta:GetPos() return self.pos end
+function meta:GetPos() 
+
+	local ent = self:GetEntity()
+	if IsValid(ent) then return ent:GetPos() end
+
+	return self.pos 
+
+end
+
 function meta:GetIndex() return self.index end
 function meta:GetName() return self.name or "<" .. self:GetClass() .. ">" end
 function meta:GetClass() return self.classname or "__unknown__" end
 function meta:GetOutputs() return self.outputs end
 function meta:GetInputs() return self.inputs end
 function meta:GetEntity() return ents.GetMapCreatedEntity(self.index+1234) end
+
+function meta:Moved()
+	for _,v in pairs(self.onMoved) do
+		v()
+	end
+end
 
 function meta:Draw()
 
@@ -208,6 +223,12 @@ function meta:Draw()
 		--if self.ent.classname == "func_movelinear" then
 		local real = self:GetEntity()
 		if IsValid(real) then
+			if self.lastPos ~= nil and self.lastPos ~= real:GetPos() then
+				self:Moved()
+			end
+
+			self.lastPos = real:GetPos()
+
 			self.model:SetPos( real:GetPos() )
 			self.model:SetAngles( real:GetAngles() )
 		end

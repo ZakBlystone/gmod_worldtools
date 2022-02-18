@@ -101,9 +101,24 @@ function meta:BuildTraces()
 			local endPos = output.to:GetPos()
 			local trace = wt_iotrace.New( startPos, endPos, id )
 
+			ent.onMoved["traceUpdate" .. id] = function()
+				self.traces[id]:Update(
+					ent:GetPos() + Vector(0,0,self.traces[id].vertical), 
+					output.to:GetPos()
+				)
+			end
+
+			output.to.onMoved["traceUpdate" .. id] = function()
+				self.traces[id]:Update(
+					ent:GetPos() + Vector(0,0,self.traces[id].vertical), 
+					output.to:GetPos()
+				)
+			end
+
 			trace:BuildPath()
 
 			self.traces[id] = trace
+			self.traces[id].vertical = n
 			self.io_to_trace[output] = self.traces[id]
 			self.trace_to_io[trace] = output
 			n = n + 2

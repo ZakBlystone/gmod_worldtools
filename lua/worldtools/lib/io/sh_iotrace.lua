@@ -46,6 +46,14 @@ function meta:Init( from, to, index )
 
 end
 
+function meta:Update( from, to )
+
+	self.from = from
+	self.to = to
+	self:BuildPath()
+
+end
+
 function meta:BuildPath( direct )
 
 	self.points = {}
