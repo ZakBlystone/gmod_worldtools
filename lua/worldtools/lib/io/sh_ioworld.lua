@@ -295,6 +295,7 @@ if CLIENT then
 	hook.Add("PostDrawOpaqueRenderables", "wt_ioworld", function()
 
 		--space:Draw()
+		if not ShouldDrawIOView() then return end
 		local world = wt_bsp.GetCurrent().ioworld
 		if world then world:DrawEntities() end
 
