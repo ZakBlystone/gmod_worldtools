@@ -162,6 +162,14 @@ if CLIENT then
 	local vray_result = Vector()
 	local cull_distance = 600
 
+	function meta:DrawEntities()
+		for ent in self.graph:Ents() do
+			if self:ShouldDrawEnt( ent ) then
+				ent:Draw()
+			end
+		end
+	end
+
 	function meta:Draw()
 
 		local eye, forward = EyePos(), EyeAngles():Forward() 
@@ -182,11 +190,7 @@ if CLIENT then
 			trace_draw(trace, cull_distance)
 		end
 
-		for ent in self.graph:Ents() do
-			if self:ShouldDrawEnt( ent ) then
-				ent:Draw()
-			end
-		end
+		-- Draw Entities
 
 		render.ClearDepth()
 		render.SetMaterial(lasermat)
@@ -291,6 +295,8 @@ if CLIENT then
 	hook.Add("PostDrawOpaqueRenderables", "wt_ioworld", function()
 
 		--space:Draw()
+		local world = wt_bsp.GetCurrent().ioworld
+		if world then world:DrawEntities() end
 
 	end)
 

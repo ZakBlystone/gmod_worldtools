@@ -161,6 +161,8 @@ FGDClasses["func_train"].outputs["OnStart"] = nil
 FGDClasses["func_pushable"] = {
 	classname = "func_pushable",
 	classtype = "SolidClass",
+	inputs = {},
+	outputs = {},
 }
 
 local proxy_name = "__wt_io_proxy"

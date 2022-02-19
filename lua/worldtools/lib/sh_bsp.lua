@@ -128,12 +128,12 @@ AddProcess( "Linking", function( data )
 
 	if data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] then wt_task.Yield("sub", "create brush windings") end
 
-	local total = #(data[LUMP_BRUSHES] or {})
+	--[[local total = #(data[LUMP_BRUSHES] or {})
 	for k, brush in ipairs( ( data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] ) or {} ) do
 		brush:CreateWindings()
 		brush.center = (brush.min + brush.max) / 2
 		wt_task.YieldPer(50, "progress", k / total)
-	end
+	end]]
 
 	if data[LUMP_LEAFFACES] then wt_task.Yield("sub", "leaffaces") end
 
@@ -459,7 +459,7 @@ function LoadBSP( bsp, path, lumps, callback )
 		for k, v in pairs(lumps) do
 			loadLump(v)
 			steps = steps + 1
-			wt_statusui.SetMainProgressBar(steps, total)
+			if CLIENT then wt_statusui.SetMainProgressBar(steps, total) end
 		end
 
 		if false then
@@ -485,7 +485,7 @@ function LoadBSP( bsp, path, lumps, callback )
 			if not b then print(e) end
 			wt_task.Yield("chunkdone", process.name, 0, e)
 			steps = steps + 1
-			wt_statusui.SetMainProgressBar(steps, total)
+			if CLIENT then wt_statusui.SetMainProgressBar(steps, total) end
 		end
 
 		bspdata.__loading = false

@@ -49,7 +49,7 @@ local function getBrushes(bspNode)
 
 		if bspNode.brushes then
 			for _, b in pairs(bspNode.brushes) do
-				table.insert(brushes, b)
+				table.insert(brushes, b:Copy(true))
 			end
 		end
 	end
@@ -73,13 +73,13 @@ local function createBrushMesh(material, brushes)
 
 			local texinfo = side.texinfo
 			local texdata = texinfo.texdata
-			side.winding:Move( to_brush )
+			--side.winding:Move( to_brush )
 			side.winding:EmitMesh(
 				texinfo.textureVecs:GetNormalized(), 
 				texinfo.lightmapVecs:GetNormalized(), 
 				texScale, 
 				texScale, -to_brush, vertices)
-			side.winding:Move( -to_brush )
+			--side.winding:Move( -to_brush )
 		end
 	end
 
@@ -177,6 +177,10 @@ function meta:BuildBrushModel()
 			brushes = getBrushes(ent.bmodel.headnode)
 
 			for _, v in pairs(brushes) do
+				for _, side in pairs(v.sides) do
+					side.plane.dist = side.plane.dist - 0.25
+				end
+
 				v:CreateWindings()
 			end
 		end
