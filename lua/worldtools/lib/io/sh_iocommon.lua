@@ -158,6 +158,11 @@ FGDClasses["func_train"].inputs["SetSpeedForwardModifier"] = nil
 FGDClasses["func_train"].outputs["OnNextPoint"] = nil
 FGDClasses["func_train"].outputs["OnStart"] = nil
 
+FGDClasses["func_pushable"] = {
+	classname = "func_pushable",
+	classtype = "SolidClass",
+}
+
 local proxy_name = "__wt_io_proxy"
 local function bindGraphIOToProxy( graph )
 

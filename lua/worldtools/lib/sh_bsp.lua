@@ -35,38 +35,42 @@ AddProcess( "Linking", function( data )
 	for k, edge in pairs( ( verts and data[LUMP_EDGES] ) or {} ) do
 		edge[1] = verts[edge[1]+1]
 		edge[2] = verts[edge[2]+1]
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", k / #data[LUMP_EDGES])
 	end
 
 	if data[LUMP_SURFEDGES] then wt_task.Yield("sub", "edges") end
 
+	local total = #(data[LUMP_SURFEDGES] or {})
 	local edges = data[LUMP_EDGES]
-	for k, surfedge in pairs( ( edges and data[LUMP_SURFEDGES] ) or {} ) do
+	for k, surfedge in ipairs( ( edges and data[LUMP_SURFEDGES] ) or {} ) do
 		data[LUMP_SURFEDGES][k] = surfedge > 0 and edges[surfedge+1] or { edges[-surfedge+1][2], edges[-surfedge+1][1] }
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", k / total)
 	end
 
 	if data[LUMP_TEXDATA] then wt_task.Yield("sub", "texdata") end
 
-	for k, texdata in pairs( data[LUMP_TEXDATA] or {} ) do
-		texdata.material = data[LUMP_TEXDATA_STRING_DATA] and data[LUMP_TEXDATA_STRING_DATA][texdata.nameStringTableID+1]
+	local total = #(data[LUMP_TEXDATA] or {})
+	for k, texdata in ipairs( data[LUMP_TEXDATA] or {} ) do
+		texdata.material = data[LUMP_TEXDATA_STRING_DATA] and data[LUMP_TEXDATA_STRING_DATA][texdata.nameStringTableID+1] or ""
 		texdata.nameStringTableID = nil
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", k / total)
 	end
 
 	if data[LUMP_TEXINFO] then wt_task.Yield("sub", "texinfo") end
 
-	for k, texinfo in pairs( data[LUMP_TEXINFO] or {} ) do
+	local total = #(data[LUMP_TEXINFO] or {})
+	for k, texinfo in ipairs( data[LUMP_TEXINFO] or {} ) do
 		texinfo.id = k
 		texinfo.texdata = data[LUMP_TEXDATA] and data[LUMP_TEXDATA][texinfo.texdata+1]
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", k / total)
 	end
 
 	local facelist = data[LUMP_FACES] or data[LUMP_ORIGINALFACES]
 
 	if facelist then wt_task.Yield("sub", "faces") end
 
-	for k, node in pairs( data[LUMP_NODES] or {} ) do
+	local total = #(data[LUMP_NODES] or {})
+	for k, node in ipairs( data[LUMP_NODES] or {} ) do
 		node.id = k
 		node.plane = data[LUMP_PLANES] and data[LUMP_PLANES][node.planenum+1]
 		node.planenum = nil
@@ -80,7 +84,7 @@ AddProcess( "Linking", function( data )
 		node.faces = {}
 		for i = node.firstface+1, node.firstface + node.numfaces do
 			table.insert( node.faces, facelist and facelist[i] )
-			wt_task.YieldPer(10000, "progress")
+			wt_task.YieldPer(10000, "progress", k / total)
 		end
 
 		node.is_leaf = false
@@ -89,20 +93,22 @@ AddProcess( "Linking", function( data )
 
 	if data[LUMP_BRUSHSIDES] then wt_task.Yield("sub", "brushsides") end
 
-	for k, side in pairs( data[LUMP_BRUSHSIDES] or {} ) do
+	local total = #(data[LUMP_BRUSHSIDES] or {})
+	for k, side in ipairs( data[LUMP_BRUSHSIDES] or {} ) do
 		side.id = k
 		side.plane = data[LUMP_PLANES] and data[LUMP_PLANES][side.planenum+1]
 		side.planenum = nil
 
 		side.texinfo = data[LUMP_TEXINFO] and data[LUMP_TEXINFO][side.texinfo+1]
 		side.dispinfo = data[LUMP_DISPINFO] and data[LUMP_DISPINFO][side.dispinfo+1]
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", k / total)
 	end
 
 	if data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] then wt_task.Yield("sub", "brushes") end
 
 	local blib = wt_brush
-	for k, brush in pairs( ( data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] ) or {} ) do
+	local total = #(data[LUMP_BRUSHES] or {})
+	for k, brush in ipairs( ( data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] ) or {} ) do
 		local newbrush = blib.Brush()
 		newbrush.contents = brush.contents
 		newbrush.id = k
@@ -114,7 +120,7 @@ AddProcess( "Linking", function( data )
 			side.dispinfo = origside.dispinfo
 			side.bevel = origside.bevel != 0
 			newbrush:Add( side )
-			wt_task.YieldPer(5000, "progress")
+			wt_task.YieldPer(5000, "progress", k / total)
 		end
 
 		data[LUMP_BRUSHES][k] = newbrush
@@ -122,40 +128,45 @@ AddProcess( "Linking", function( data )
 
 	if data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] then wt_task.Yield("sub", "create brush windings") end
 
-	for k, brush in pairs( ( data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] ) or {} ) do
+	local total = #(data[LUMP_BRUSHES] or {})
+	for k, brush in ipairs( ( data[LUMP_BRUSHSIDES] and data[LUMP_BRUSHES] ) or {} ) do
 		brush:CreateWindings()
 		brush.center = (brush.min + brush.max) / 2
-		wt_task.YieldPer(200, "progress")
+		wt_task.YieldPer(50, "progress", k / total)
 	end
 
 	if data[LUMP_LEAFFACES] then wt_task.Yield("sub", "leaffaces") end
 
-	for k, leafface in pairs( data[LUMP_LEAFFACES] or {} ) do
+	local total = #(data[LUMP_LEAFFACES] or {})
+	for k, leafface in ipairs( data[LUMP_LEAFFACES] or {} ) do
 		data[LUMP_LEAFFACES][k] = facelist and facelist[leafface+1]
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", k / total)
 	end
 
 	if data[LUMP_LEAFBRUSHES] then wt_task.Yield("sub", "leafbrushes") end
 
-	for k, leafbrush in pairs( data[LUMP_LEAFBRUSHES] or {} ) do
+	local total = #(data[LUMP_LEAFBRUSHES] or {})
+	for k, leafbrush in ipairs( data[LUMP_LEAFBRUSHES] or {} ) do
 		data[LUMP_LEAFBRUSHES][k] = data[LUMP_BRUSHES] and data[LUMP_BRUSHES][leafbrush+1]
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", k / total)
 	end
 
 	if data[LUMP_LEAFS] then wt_task.Yield("sub", "leafs") end
 
-	for k, leaf in pairs( data[LUMP_LEAFS] or {} ) do
+	local total = #(data[LUMP_LEAFS] or {})
+	for k, leaf in ipairs( data[LUMP_LEAFS] or {} ) do
+		local prog = k / total
 		leaf.id = k
 		leaf.faces = {}
 		for i = leaf.firstleafface+1, leaf.firstleafface + leaf.numleaffaces do
 			table.insert( leaf.faces, data[LUMP_LEAFFACES] and data[LUMP_LEAFFACES][i] )
-			wt_task.YieldPer(10000, "progress")
+			wt_task.YieldPer(10000, "progress", prog)
 		end
 
 		leaf.brushes = {}
 		for i = leaf.firstleafbrush+1, leaf.firstleafbrush + leaf.numleafbrushes do
 			table.insert( leaf.brushes, data[LUMP_LEAFBRUSHES] and data[LUMP_LEAFBRUSHES][i] )
-			wt_task.YieldPer(10000, "progress")
+			wt_task.YieldPer(10000, "progress", prog)
 		end
 
 		leaf.has_detail_brushes = false
@@ -163,7 +174,7 @@ AddProcess( "Linking", function( data )
 			if bit.band( v.contents, CONTENTS_DETAIL ) ~= 0 then
 				leaf.has_detail_brushes = true
 			end
-			wt_task.YieldPer(10000, "progress")
+			wt_task.YieldPer(10000, "progress", prog)
 		end
 
 		leaf.mins = Vector(leaf.mins[1], leaf.mins[2], leaf.mins[3])
@@ -174,15 +185,16 @@ AddProcess( "Linking", function( data )
 
 	if data[LUMP_LEAFS] then wt_task.Yield("sub", "faces and originalfaces") end
 
-	for _, lump in pairs( { data[LUMP_FACES], data[LUMP_ORIGINALFACES] }) do
-	for k, face in pairs( lump ) do
+	for _, lump in ipairs( { data[LUMP_FACES], data[LUMP_ORIGINALFACES] }) do
+	local total = #lump
+	for k, face in ipairs( lump ) do
 		face.id = k
 		face.plane = data[LUMP_PLANES] and data[LUMP_PLANES][face.planenum+1]
 		face.planenum = nil
 		face.edges = {}
 		for i = face.firstedge+1, face.firstedge + face.numedges do
 			table.insert( face.edges, data[LUMP_SURFEDGES] and data[LUMP_SURFEDGES][i] )
-			wt_task.YieldPer(10000, "progress")
+			wt_task.YieldPer(10000, "progress", k / total)
 		end
 
 		face.texinfo = data[LUMP_TEXINFO] and data[LUMP_TEXINFO][face.texinfo+1]
@@ -191,20 +203,21 @@ AddProcess( "Linking", function( data )
 		face.primitives = {}
 		for i = face.firstPrimID+1, face.firstPrimID + face.numPrims do
 			table.insert( face.edges, data[LUMP_PRIMITIVES] and data[LUMP_PRIMITIVES][i] )
-			wt_task.YieldPer(10000, "progress")
+			wt_task.YieldPer(10000, "progress", k / total)
 		end
 	end
 	end
 
 	if data[LUMP_LEAFS] then wt_task.Yield("sub", "models") end
 
-	for k, model in pairs( data[LUMP_MODELS] or {} ) do
+	local total = #(data[LUMP_MODELS] or {})
+	for k, model in ipairs( data[LUMP_MODELS] or {} ) do
 		model.id = k
 		model.headnode = data[LUMP_NODES] and data[LUMP_NODES][model.headnode+1]
 		model.faces = {}
 		for i = model.firstface+1, model.firstface + model.numfaces do
 			table.insert( model.faces, facelist and facelist[i] )
-			wt_task.YieldPer(10000, "progress")
+			wt_task.YieldPer(10000, "progress", k / total)
 		end
 	end
 
@@ -246,6 +259,9 @@ AddProcess( "Converting Entities", function( data )
 				end
 			end
 		end
+		if k == "classname" then
+			wt_task.Yield("sub", tostring(v))
+		end
 		if string.Left( k, 2 ) == "On" then
 			t.outputs = t.outputs or {}
 			table.insert( t.outputs, {k, v} )
@@ -282,9 +298,10 @@ AddProcess( "Converting Entities", function( data )
 	sm2[sm2.none .. sm2.object] = match("{") - smstate( sm.string )
 	sm2[sm2.object .. sm2.none] = match("}") - smstate( sm.string )
 
+	local total = #str
 	for i=1, #str do
 		sm2(str[i])
-		wt_task.YieldPer(10000, "progress")
+		wt_task.YieldPer(10000, "progress", i / total)
 	end
 
 	data[LUMP_ENTITIES] = out
@@ -413,14 +430,14 @@ LUMPS_DEFAULT_CLIENT =
 	LUMP_MODELS,				--Brush models (trigger_* / func_*)
 	LUMP_LEAFBRUSHES,			--Indexing between leafs and brushes
 	LUMP_TEXDATA,				--Texture data (width / height / name)
-	LUMP_TEXDATA_STRING_DATA,	--Names of textures
+	--LUMP_TEXDATA_STRING_DATA,	--Names of textures
 	LUMP_TEXINFO,				--Surface texture info
-	LUMP_VERTEXES,				--All vertices that make up map geometry
-	LUMP_EDGES,					--Edges between vertices in map geometry
-	LUMP_SURFEDGES,				--Indexing between vertices
+	--LUMP_VERTEXES,			--All vertices that make up map geometry
+	--LUMP_EDGES,				--Edges between vertices in map geometry
+	--LUMP_SURFEDGES,			--Indexing between vertices
 	--LUMP_FACES,				--Poligonal faces
-	LUMP_ORIGINALFACES,			--Original poligonal faces before BSP splitting
-	LUMP_LEAFFACES,				--Indexing between leafs and faces
+	--LUMP_ORIGINALFACES,		--Original poligonal faces before BSP splitting
+	--LUMP_LEAFFACES,			--Indexing between leafs and faces
 	LUMP_WORLDLIGHTS,			--Extended information for light_* entities
 	LUMP_CUBEMAPS,				--env_cubemap locations and sizes
 }
@@ -437,8 +454,12 @@ function LoadBSP( bsp, path, lumps, callback )
 
 	local function load()
 
-		for _, v in pairs(lumps) do
+		local total = #lumps + #processes
+		local steps = 0
+		for k, v in pairs(lumps) do
 			loadLump(v)
+			steps = steps + 1
+			wt_statusui.SetMainProgressBar(steps, total)
 		end
 
 		if false then
@@ -463,6 +484,8 @@ function LoadBSP( bsp, path, lumps, callback )
 			local b,e = pcall( process.func, bspdata )
 			if not b then print(e) end
 			wt_task.Yield("chunkdone", process.name, 0, e)
+			steps = steps + 1
+			wt_statusui.SetMainProgressBar(steps, total)
 		end
 
 		bspdata.__loading = false
@@ -499,19 +522,27 @@ function LoadBSP( bsp, path, lumps, callback )
 
 		local t = wt_task.New( load, 1 )
 		function t:chunk( name, count )
-			Msg("LOADING: " .. string.upper(name) .. " : " .. count .. " " )
+			--Msg("LOADING: " .. string.upper(name) .. " : " .. count .. " " )
+			--wt_statusui.SetLoadState(string.upper(name))
+			wt_statusui.SetMainText( "LOADING BSP : " .. string.upper(name) )
 		end
 
 		function t:sub(name)
-			Msg("\n\t" .. string.upper(name))
+			--Msg("\n\t" .. string.upper(name))
+			wt_statusui.SetSubText( string.upper(name) )
 		end
 
-		function t:progress()
+		function t:progress(percent, total)
 			-- Msg(".")
+			if total then
+				wt_statusui.SetSubText( math.floor(total * percent) .. " / " .. total )
+			end
+			wt_statusui.SetSubProgressBar(percent, 1)
+			wt_statusui.PostProgress()
 		end
 
 		function t:chunkdone( name, count, tab )
-			Msg("DONE\n")
+			--Msg("DONE\n")
 		end
 
 		bspdata.__task = t
@@ -528,34 +559,53 @@ end
 
 --if true then return end
 
---if CLIENT then WT_LOADED_BSP = nil end
---if SERVER then WT_LOADED_BSP = nil end
-if WT_LOADED_BSP == nil then
-	if SERVER then
-		--LoadBSP(game.GetMap())
-		print("SERVER LOADING BSP...")
-	else
-		print("CLIENT LOADING BSP...")
+function Init()
+
+	--if CLIENT then WT_LOADED_BSP = nil end
+	--if SERVER then WT_LOADED_BSP = nil end
+	if WT_LOADED_BSP == nil then
+		if SERVER then
+			--LoadBSP(game.GetMap())
+			print("SERVER LOADING BSP...")
+		else
+			print("CLIENT LOADING BSP...")
+		end
+
+		if CLIENT then wt_statusui.SetLoading(true) end
+
+		WT_LOADED_BSP = LoadBSP( game.GetMap(), nil,
+			SERVER and LUMPS_DEFAULT_SERVER or LUMPS_DEFAULT_CLIENT,
+			SERVER and BLOCK_THREAD or function()
+
+			hook.Call( "wt_bsp_ready" )
+			print("CLIENT FINISHED LOADING BSP")
+			print( PrintTable( WT_LOADED_BSP.entities[1] ) )
+
+			wt_statusui.SetMainText( "LOADING BSP : COMPLETE")
+			wt_statusui.SetSubText( "" )
+			wt_statusui.SetLoading( false )
+
+		end )
+
+		if SERVER then
+
+			print("SERVER FINISHED LOADING BSP")
+			print( PrintTable( WT_LOADED_BSP.entities[1] ) )
+			hook.Call( "wt_bsp_ready" )
+
+		end
+
 	end
 
-	WT_LOADED_BSP = LoadBSP( game.GetMap(), nil,
-		SERVER and LUMPS_DEFAULT_SERVER or LUMPS_DEFAULT_CLIENT,
-		SERVER and BLOCK_THREAD or function()
+end
 
-		hook.Call( "wt_bsp_ready" )
-		print("CLIENT FINISHED LOADING BSP")
-		print( PrintTable( WT_LOADED_BSP.entities[1] ) )
+Init()
 
-	end )
-
-	if SERVER then
-
-		print("SERVER FINISHED LOADING BSP")
-		print( PrintTable( WT_LOADED_BSP.entities[1] ) )
-		hook.Call( "wt_bsp_ready" )
-
-	end
-
+if CLIENT then
+	concommand.Add("wt_reloadbsp", function()
+		WT_LOADED_BSP = nil
+		Init()
+	end)
 end
 
 function GetCurrent()

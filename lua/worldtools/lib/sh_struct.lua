@@ -15,16 +15,14 @@ decl_type = function( read, write, size, tsfunc )
 		__index = function( self, k )
 			if type(k) == "number" then
 
-				local yieldpoints = math.ceil( 10000 / size )
 				local params = rawget( self, "__params" )
 				local key = params and params["key"]
 				local decl = decl_type( function( f )
 
 					local t = {}
 					for i=1, k do
-						if i % yieldpoints == yieldpoints-1 then task.Yield("progress", i) end
 						if not key then
-							table.insert( t, read(f) )
+							t[#t+1] = read(f)
 						else
 							local d = read(f)
 							t[d[key]] = d

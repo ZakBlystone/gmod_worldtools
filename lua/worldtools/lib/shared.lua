@@ -30,5 +30,6 @@ include("io/sh_ioworld.lua")
 include("sh_bsp.lua")
 include("sh_bmodelmap.lua")
 include("sh_bspquery.lua")
+include("sh_textfx.lua")
 
 if SERVER then AddCSLuaFile("shared.lua") end

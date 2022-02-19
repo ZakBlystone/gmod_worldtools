@@ -629,6 +629,30 @@ local function ReadLumpStruct( f, lump, struct, lumpid )
 
 	f:Seek( lump.offset )
 
+	local chunked = math.floor(8000 / struct.sizeof)
+	if size > chunked then
+
+		local name = BSP.LumpNames[lumpid+1]
+		wt_task.Yield("chunk", name, size)
+
+		local t = {}
+		local num = size
+		while num > 0 do
+			wt_task.Yield("progress", (size-num) / size, size)
+			local toload = math.min(num, chunked)
+			local loaded = struct[ toload ].read(f)
+			for _,v in ipairs(loaded) do
+				t[#t+1] = v
+			end
+			num = num - toload
+		end
+
+		wt_task.Yield("chunkdone", name, size, t)
+
+		return t
+
+	end
+
 	return Chunk( lumpid, size, struct[ size ].read, f )
 end
 
@@ -901,7 +925,7 @@ BSP.Readers[LUMP_TEXDATA_STRING_DATA] = function( f, header )
 				str = str .. ch
 			end
 			i = i + 1
-			if i % 4000 == 1 then wt_task.Yield("progress", i) end
+			if i % 4000 == 1 then wt_task.Yield("progress", 0) end
 		end
 		return names
 

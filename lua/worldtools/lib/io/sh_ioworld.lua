@@ -269,11 +269,10 @@ if CLIENT then
 		["$additive"] = 0,
 	})
 
-	local space = nil
-
 	hook.Add("IOEventTriggered", "wt_ioworld", function(ent, event)
 
-		if space then space:AddBlipsFromIOEvent( ent, event ) end
+		local world = wt_bsp.GetCurrent().ioworld
+		if world then world:AddBlipsFromIOEvent( ent, event ) end
 
 	end)
 
@@ -323,8 +322,8 @@ if CLIENT then
 
 		if wt_bsp.GetCurrent() == nil then print("NO BSP") return end
 		if wt_bsp.GetCurrent():IsLoading() then return end
-		if space == nil then space = wt_bsp.GetCurrent().ioworld end
-		if space == nil then return end
+		local world = wt_bsp.GetCurrent().ioworld
+		if world == nil then return end
 
 		local w = ScrW()
 		local h = ScrH()
@@ -367,7 +366,7 @@ if CLIENT then
 				_G.G_EYE_X = _G.G_EYE_POS.x
 				_G.G_EYE_Y = _G.G_EYE_POS.y
 				_G.G_EYE_Z = _G.G_EYE_POS.z
-				space:Draw()
+				world:Draw()
 
 			end)
 			if not b then print( e ) end
