@@ -615,9 +615,9 @@ BSP.PhysModelHeader_t = Struct({
 local function Chunk( lumpid, size, f, ... )
 
 	local name = BSP.LumpNames[lumpid+1]
-	task.Yield("chunk", name, size)
+	wt_task.Yield("chunk", name, size)
 	local out = f(...)
-	task.Yield("chunkdone", name, size, out)
+	wt_task.Yield("chunkdone", name, size, out)
 	return out
 
 end
@@ -901,7 +901,7 @@ BSP.Readers[LUMP_TEXDATA_STRING_DATA] = function( f, header )
 				str = str .. ch
 			end
 			i = i + 1
-			if i % 4000 == 1 then task.Yield("progress", i) end
+			if i % 4000 == 1 then wt_task.Yield("progress", i) end
 		end
 		return names
 

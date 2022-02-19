@@ -2,8 +2,10 @@ AddCSLuaFile()
 
 module( "wt_ionode", package.seeall )
 
+G_IONODE_META = G_IONODE_META or {}
+
 local toolTextures = {}
-local meta = {}
+local meta = G_IONODE_META
 meta.__index = meta
 
 if CLIENT then
@@ -89,6 +91,12 @@ end
 
 local function lookupBrushMaterial(classname)
 
+	if true then
+
+		return wt_iocommon.GetToolMaterial(classname)
+
+	end
+
 	for k, v in pairs(toolTextures) do
 		if string.find(classname, k) then return v end
 	end
@@ -132,13 +140,13 @@ function GetOutputTableForEntity( ent )
 
 end
 
-function meta:Init( ent, indexTable )
+function meta:Init( ent )
 
 	self.ent = ent
 	self.name = ent.targetname
 	self.classname = ent.classname
 	self.pos = ent.origin or Vector(0,0,0)
-	self.index = indexTable[ent]
+	self.index = ent.index
 	self.outputs = {}
 	self.inputs = {}
 	self.onMoved = {}
@@ -153,8 +161,9 @@ function meta:BuildBrushModel()
 	if not CLIENT then return end
 
 	local ent = self.ent
-	local brushMaterial = ent.model and string.len(ent.model) > 0 and lookupBrushMaterial(ent.classname)
-	if brushMaterial then
+	local validModel = ent.model and string.len(ent.model) > 0 and ent.model[1] == "*"
+	local brushMaterial = validModel and lookupBrushMaterial(ent.classname)
+	if brushMaterial and validModel then
 
 		local modelent = wt_csent.ManagedCSEnt("ionode_" .. self.index, ent.model)
 
@@ -190,6 +199,10 @@ function meta:BuildBrushModel()
 		end
 		self.model = modelent
 
+	elseif validModel then
+
+		print("NO MATERIAL FOR CLASS: " .. ent.classname .. " : " .. tostring(ent.model))
+
 	end
 
 end
@@ -209,6 +222,7 @@ function meta:GetClass() return self.classname or "__unknown__" end
 function meta:GetOutputs() return self.outputs end
 function meta:GetInputs() return self.inputs end
 function meta:GetEntity() return ents.GetMapCreatedEntity(self.index+1234) end
+function meta:ExistsOnServer() return ents.ExistsOnServer(self.index+1234) end
 
 function meta:Moved()
 	for _,v in pairs(self.onMoved) do
@@ -216,7 +230,11 @@ function meta:Moved()
 	end
 end
 
+local angleIdent = Angle(0,0,0)
+
 function meta:Draw()
+
+	if not self:ExistsOnServer() then return end
 
 	if self.model then
 
@@ -231,10 +249,21 @@ function meta:Draw()
 
 			self.model:SetPos( real:GetPos() )
 			self.model:SetAngles( real:GetAngles() )
+		else
+			if self.lastPos ~= nil and self.lastPos ~= self.pos then
+				self:Moved()
+			end
+
+			self.lastPos = self.pos
+
+			self.model:SetPos( self.pos )
+			self.model:SetAngles( angleIdent )
 		end
 		--end
 		self.model:DrawModel()
 	end
+
+	--debugoverlay.Text( self.pos, self.classname .. ": " .. self.index, 0.01, false )
 
 	--gfx.renderBox( self:GetPos(), Vector(-2,-2,-2), Vector(2,2,2), Color(100,100,100) )
 

@@ -48,7 +48,7 @@ function meta:GetTraceForRay( origin, dir, result, maxDist )
 	local pick = nil
 	local point = nil
 
-	local test = G_IOTRACE_META.TestRay
+	local test = wt_iotrace.G_IOTRACE_META.TestRay
 	local ox, oy, oz = origin:Unpack()
 	local dx, dy, dz = dir:Unpack()
 
@@ -156,9 +156,9 @@ if CLIENT then
 	local lasermat = Material("effects/laser1.vmt")
 	local flaremat = Material("effects/blueflare1")
 
-	local trace_draw = G_IOTRACE_META.Draw
-	local trace_draw_flashes = G_IOTRACE_META.DrawFlashes
-	local trace_draw_blips = G_IOTRACE_META.DrawBlips
+	local trace_draw = wt_iotrace.G_IOTRACE_META.Draw
+	local trace_draw_flashes = wt_iotrace.G_IOTRACE_META.DrawFlashes
+	local trace_draw_blips = wt_iotrace.G_IOTRACE_META.DrawBlips
 	local vray_result = Vector()
 	local cull_distance = 600
 
@@ -217,7 +217,7 @@ if CLIENT then
 				if input.IsMouseDown(MOUSE_LEFT) then
 					if not was_mouse_down then
 						print("DO IT")
-						wt_ionet.RequestRideTrace( hitTrace, point.along + along )
+						--wt_ionet.RequestRideTrace( hitTrace, point.along + along )
 						was_mouse_down = true
 					end
 				else
@@ -324,6 +324,7 @@ if CLIENT then
 		if wt_bsp.GetCurrent() == nil then print("NO BSP") return end
 		if wt_bsp.GetCurrent():IsLoading() then return end
 		if space == nil then space = wt_bsp.GetCurrent().ioworld end
+		if space == nil then return end
 
 		local w = ScrW()
 		local h = ScrH()

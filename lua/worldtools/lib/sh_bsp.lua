@@ -221,7 +221,7 @@ AddProcess( "Linking", function( data )
 end )
 
 AddProcess( "Converting Entities", function( data )
-	if not data[LUMP_ENTITIES] then return end
+	if not data[LUMP_ENTITIES] then print("NO ENTITIES TO LOAD") return end
 
 	local function ProcessKeyValue(t, k, v)
 		if k == "origin" then
@@ -238,7 +238,7 @@ AddProcess( "Converting Entities", function( data )
 			return Angle(x,y,z)
 		end
 		if k == "model" then
-			if v[1] == "*" then
+			if v[1] == "*" and data.models ~= nil then
 				local index = string.match( v, "(%d+)")
 				local model = data.models[ index+1 ]
 				if model then
@@ -397,33 +397,33 @@ if SERVER then
 
 end
 
-LUMPS_DEFAULT = {
-		LUMP_ENTITIES,				--All in-map entities
-		LUMP_PLANES,				--Plane equations for map geometry
-		LUMP_BRUSHES,				--Brushes
-		LUMP_BRUSHSIDES,			--Sides of brushes
-		LUMP_GAME_LUMP,				--Static props and detail props
-		LUMP_NODES,					--Spatial partitioning nodes
-		LUMP_LEAFS,					--Spatial partitioning leafs
-		LUMP_MODELS,				--Brush models (trigger_* / func_*)
-		LUMP_LEAFBRUSHES,			--Indexing between leafs and brushes
-		LUMP_TEXDATA,				--Texture data (width / height / name)
-		LUMP_TEXDATA_STRING_DATA,	--Names of textures
-		LUMP_TEXINFO				--Surface texture info
+LUMPS_DEFAULT_SERVER = {
+	LUMP_ENTITIES,				--All in-map entities
 }
 
 LUMPS_DEFAULT_CLIENT =
 {
-	LUMP_VERTEXES,		--All vertices that make up map geometry
-	LUMP_EDGES,			--Edges between vertices in map geometry
-	LUMP_SURFEDGES,		--Indexing between vertices
-	--LUMP_FACES,		--Poligonal faces
-	LUMP_ORIGINALFACES,	--Original poligonal faces before BSP splitting
-	LUMP_LEAFFACES,		--Indexing between leafs and faces
-	LUMP_WORLDLIGHTS,	--Extended information for light_* entities
-	LUMP_CUBEMAPS,		--env_cubemap locations and sizes
+	LUMP_ENTITIES,
+	LUMP_PLANES,				--Plane equations for map geometry
+	LUMP_BRUSHES,				--Brushes
+	LUMP_BRUSHSIDES,			--Sides of brushes
+	LUMP_GAME_LUMP,				--Static props and detail props
+	LUMP_NODES,					--Spatial partitioning nodes
+	LUMP_LEAFS,					--Spatial partitioning leafs
+	LUMP_MODELS,				--Brush models (trigger_* / func_*)
+	LUMP_LEAFBRUSHES,			--Indexing between leafs and brushes
+	LUMP_TEXDATA,				--Texture data (width / height / name)
+	LUMP_TEXDATA_STRING_DATA,	--Names of textures
+	LUMP_TEXINFO,				--Surface texture info
+	LUMP_VERTEXES,				--All vertices that make up map geometry
+	LUMP_EDGES,					--Edges between vertices in map geometry
+	LUMP_SURFEDGES,				--Indexing between vertices
+	--LUMP_FACES,				--Poligonal faces
+	LUMP_ORIGINALFACES,			--Original poligonal faces before BSP splitting
+	LUMP_LEAFFACES,				--Indexing between leafs and faces
+	LUMP_WORLDLIGHTS,			--Extended information for light_* entities
+	LUMP_CUBEMAPS,				--env_cubemap locations and sizes
 }
-table.Merge(LUMPS_DEFAULT_CLIENT, LUMPS_DEFAULT)
 
 function LoadBSP( bsp, path, lumps, callback )
 
@@ -526,7 +526,10 @@ function LoadBSP( bsp, path, lumps, callback )
 
 end
 
-if CLIENT then WT_LOADED_BSP = nil end
+--if true then return end
+
+--if CLIENT then WT_LOADED_BSP = nil end
+--if SERVER then WT_LOADED_BSP = nil end
 if WT_LOADED_BSP == nil then
 	if SERVER then
 		--LoadBSP(game.GetMap())
@@ -536,11 +539,12 @@ if WT_LOADED_BSP == nil then
 	end
 
 	WT_LOADED_BSP = LoadBSP( game.GetMap(), nil,
-		SERVER and LUMPS_DEFAULT or LUMPS_DEFAULT_CLIENT,
+		SERVER and LUMPS_DEFAULT_SERVER or LUMPS_DEFAULT_CLIENT,
 		SERVER and BLOCK_THREAD or function()
 
 		hook.Call( "wt_bsp_ready" )
-		print("DONE")
+		print("CLIENT FINISHED LOADING BSP")
+		print( PrintTable( WT_LOADED_BSP.entities[1] ) )
 
 	end )
 

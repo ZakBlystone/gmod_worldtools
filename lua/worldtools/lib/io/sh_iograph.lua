@@ -31,13 +31,8 @@ function meta:Init( mapData )
 	self.entsByID = {}
 	self.nodes = {}
 
-	local indices = {}
-	for k,v in ipairs(self.ents) do
-		indices[v] = k
-	end
-
 	for _, ent in ipairs(self.ents) do
-		local node = wt_ionode.New( ent, indices )
+		local node = wt_ionode.New( ent )
 		self.nodes[#self.nodes+1] = node
 		self.entsByID[node:GetIndex()] = node
 	end

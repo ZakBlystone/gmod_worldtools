@@ -1,8 +1,8 @@
 AddCSLuaFile()
 
-G_IOTRACE_META = G_IOTRACE_META or {}
-
 module( "wt_iotrace", package.seeall )
+
+G_IOTRACE_META = G_IOTRACE_META or {}
 
 local vmeta = FindMetaTable("Vector")
 local vunpack = vmeta.Unpack

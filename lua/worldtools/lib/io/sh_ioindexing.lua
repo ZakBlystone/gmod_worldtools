@@ -2,7 +2,10 @@ AddCSLuaFile()
 
 module( "wt_ioindexing", package.seeall )
 
-STATE = STATE or {}
+STATE = STATE or {
+	entity_lookup = {},
+	map_lookup = {},
+}
 
 function EncodeDeltas(t)
 
@@ -118,29 +121,94 @@ if SERVER then
 		local entities = ents.GetAll()
 		local mapIDs = {}
 		local entIDs = {}
+		local count = 0
 		for _,v in ipairs(entities) do
-			mapIDs[#mapIDs+1] = v:MapCreationID()
-			entIDs[#entIDs+1] = v:EntIndex()
+			if v:MapCreationID() ~= -1 then
+				mapIDs[#mapIDs+1] = v:MapCreationID()
+				entIDs[#entIDs+1] = v:EntIndex()
+				count = count + 1
+			end
 		end
 
 		mapIDs = EncodeIDList(mapIDs)
 		entIDs = EncodeIDList(entIDs)
 
 		net.Start("wt_io_mapids")
-		net.WriteUInt(#entities, 24)
+		net.WriteUInt(count, 24)
 		net.WriteUInt(#mapIDs, 24)
 		net.WriteUInt(#entIDs, 24)
 
 		for i=1, #mapIDs do net.WriteUInt(mapIDs[i], 32) end
 		for i=1, #entIDs do net.WriteUInt(entIDs[i], 32) end
 
+		print("SEND: " .. count .. " entity indices [" .. #mapIDs .. "]")
+
 		net.Send(ply)
+
+	end
+
+	function BroadcastIDs()
+
+		local entities = ents.GetAll()
+		local mapIDs = {}
+		local entIDs = {}
+		local count = 0
+		for _,v in ipairs(entities) do
+			if v:MapCreationID() ~= -1 then
+				mapIDs[#mapIDs+1] = v:MapCreationID()
+				entIDs[#entIDs+1] = v:EntIndex()
+				count = count + 1
+			end
+		end
+
+		mapIDs = EncodeIDList(mapIDs)
+		entIDs = EncodeIDList(entIDs)
+
+		net.Start("wt_io_mapids")
+		net.WriteUInt(count, 24)
+		net.WriteUInt(#mapIDs, 24)
+		net.WriteUInt(#entIDs, 24)
+
+		for i=1, #mapIDs do net.WriteUInt(mapIDs[i], 32) end
+		for i=1, #entIDs do net.WriteUInt(entIDs[i], 32) end
+
+		print("SEND: " .. count .. " entity indices [" .. #mapIDs .. "]")
+
+		net.Broadcast()
 
 	end
 
 	net.Receive("wt_io_mapids", function(len, ply)
 
 		SendIDsToPlayer(ply)
+
+	end)
+
+	hook.Add("PostCleanupMap", "wt_io_indexercleanup", BroadcastIDs)
+
+	local needBroadcastIDs = false
+	local tickTimer = 0
+	hook.Add("Tick", "wt_io_indexertick", function()
+
+		if tickTimer <= 0 then
+			tickTimer = 1
+		else
+			tickTimer = tickTimer - FrameTime()
+			return
+		end
+
+		if needBroadcastIDs then
+			BroadcastIDs()
+			needBroadcastIDs = false
+		end
+
+	end)
+
+	hook.Add("EntityRemoved", "wt_io_indexerremove", function(ent)
+
+		if ent:MapCreationID() ~= -1 then
+			needBroadcastIDs = true
+		end
 
 	end)
 
@@ -166,6 +234,12 @@ if CLIENT then
 	function m:GetBSPEntity()
 
 		return ents.GetBSPEntity( self:MapCreationID() )
+
+	end
+
+	function ents.ExistsOnServer(id)
+
+		return STATE.entity_lookup[id]
 
 	end
 
