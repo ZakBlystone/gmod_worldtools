@@ -163,6 +163,8 @@ function meta:BuildBrushModel()
 
 	if not CLIENT then return end
 
+	local me = self
+
 	local ent = self.ent
 	local validModel = ent.model and string.len(ent.model) > 0 and ent.model[1] == "*"
 	local brushMaterial = validModel and lookupBrushMaterial(ent.classname)
@@ -196,6 +198,7 @@ function meta:BuildBrushModel()
 		function modelent:RenderOverride()
 
 			if not wt_ioworld.ShouldDrawIOView() then return end
+			if not me:ExistsOnServer() then return end
 
 			local mtx = self.IOBrushMatrix
 			mtx:SetTranslation(self:GetPos() )
