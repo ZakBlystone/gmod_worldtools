@@ -196,7 +196,14 @@ end
 
 if SERVER then
 
+	local noReroute = CreateConVar(
+		"wt_dont_reroute_io", "0", 
+		{ FCVAR_ARCHIVE }, 
+		"Disable IO Rerouting")
+
 	local function BindEntityToSink(entity, class)
+
+		if noReroute:GetBool() then return end
 
 		if not IsValid(entity) then print("FAILED TO BIND: " .. tostring(class)) return end
 		if entity:GetClass() == "wt_io_proxy" then return end
@@ -257,6 +264,7 @@ if SERVER then
 	local function SetupEntity(entity)
 
 		if not IsValid(entity) then return end
+		if noReroute:GetBool() then return end
 
 		local class = entity:GetClass()
 		--timer.Simple(0, function() BindEntityToSink(entity, class) end)
@@ -267,6 +275,8 @@ if SERVER then
 
 	local function RemovedEntity(entity)
 
+		if noReroute:GetBool() then return end
+
 		print("Removed: " .. tostring(entity:GetName()) .. " : " .. entity:GetClass())
 
 	end
@@ -275,6 +285,8 @@ if SERVER then
 	local function StripIO(entity, key, value)
 
 		--print(tostring(entity) .. "." .. tostring(key) .. " = " .. tostring(value))
+
+		if noReroute:GetBool() then return nil end
 
 		local fgd = FGDClasses[entity:GetClass()]
 		if fgd then
