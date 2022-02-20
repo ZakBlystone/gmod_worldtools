@@ -2,6 +2,8 @@ AddCSLuaFile()
 
 module( "wt_iograph", package.seeall )
 
+G_IOGRAPH_META = G_IOGRAPH_META or {}
+
 --[[
 
 graph is made of nodes, each node is an entity.
@@ -22,7 +24,26 @@ each output:
 
 ]]
 
-local meta = {}
+local eventDataMeta = {}
+eventDataMeta.__index = eventDataMeta
+
+function eventDataMeta:Fire(activator, caller, delay)
+
+	local real = self.to:GetEntity()
+	if IsValid(real) then
+		real:Fire(
+			self.func, 
+			self.param, 
+			delay or self.delay, 
+			activator or self.from:GetEntity(), 
+			caller or self.from:GetEntity())
+	else
+		print("COULDN'T FIND REAL ENTITY FOR: " .. self.to:GetName())
+	end
+
+end
+
+local meta = G_IOGRAPH_META
 meta.__index = meta
 
 function meta:Init( mapData )
@@ -64,18 +85,45 @@ function meta:Link()
 					event = output.event,
 					func = output.func,
 					param = output.param,
-					delay = output.delay,
+					delay = (output.delay or 0),
 					refire = output.refire,
 				}
 
+				setmetatable(eventData, eventDataMeta)
+
 				ent.outputs[#ent.outputs+1] = eventData
-				target.inputs[#ent.outputs+1] = eventData
+				target.inputs[#target.inputs+1] = eventData
 
 				wt_task.YieldPer(10, "progress", 1)
 
 			end
 
 		end
+
+	end
+
+end
+
+function meta:FireOutput( ent, event, activator, caller )
+
+	for _,v in ipairs(ent.outputs) do
+
+		if v.event == event then
+
+			v:Fire(activator, caller)
+
+		end
+
+	end
+
+end
+
+function meta:HandleOutput( caller, activator, event, data )
+
+	local ent = self:GetByEntity(caller)
+	if ent ~= nil then
+
+		self:FireOutput( ent, event, activator, caller )
 
 	end
 

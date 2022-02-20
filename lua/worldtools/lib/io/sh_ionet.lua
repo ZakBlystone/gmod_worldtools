@@ -4,6 +4,7 @@ if SERVER then
 
 	util.AddNetworkString("io_net_event")
 	util.AddNetworkString("io_player_ride")
+	util.AddNetworkString("io_trace_interact")
 
 end
 
@@ -81,7 +82,37 @@ if SERVER then
 
 	end)
 
+	net.Receive("io_trace_interact", function(len, ply)
+
+		local mode = net.ReadUInt(1)
+		local id = net.ReadUInt(32)+1
+		local along = net.ReadFloat()
+		local ioworld = wt_bsp.GetCurrent().ioworld
+		local trace = ioworld:GetTraceByIndex(id)
+
+		print("INTERACT TRACE: " .. id)
+
+		if ioworld and ioworld.graph then
+
+			ioworld:InteractTrace(ply, mode, trace, along)
+
+		end
+
+	end)
+
 else
+
+	function PlayerInteractTrace( trace, along, mode )
+
+		local id = trace:GetIndex()
+
+		net.Start("io_trace_interact")
+		net.WriteUInt( mode, 1 )
+		net.WriteUInt( id-1, 32 )
+		net.WriteFloat( along )
+		net.SendToServer()
+
+	end
 
 	function RequestRideTrace( trace, along )
 

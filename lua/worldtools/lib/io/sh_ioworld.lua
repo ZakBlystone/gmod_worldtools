@@ -19,6 +19,18 @@ function meta:Init(iograph)
 
 end
 
+function meta:InteractTrace( ply, mode, trace, along )
+
+	if mode == 0 then
+		print(mode)
+
+		local output = self:GetIOForTrace( trace )
+		output:Fire(ply, ply, 0)
+
+	end
+
+end
+
 function meta:ShouldDrawEnt( ent )
 
 	local inputs = ent:GetInputs()
@@ -152,6 +164,8 @@ end
 if CLIENT then
 
 	local blip_color = Color(255,180,50)
+	local highlighted_color = Color(255,255,255)
+	local trace_color_dead = Color(180,20,20,255)
 	local was_mouse_down = false
 	local lasermat = Material("effects/laser1.vmt")
 	local flaremat = Material("effects/blueflare1")
@@ -174,6 +188,7 @@ if CLIENT then
 
 		local eye, forward = EyePos(), EyeAngles():Forward() 
 		local tracesDrawn = 0
+		local look_at_trace = LocalPlayer().look_at_trace
 
 		local gc0 = collectgarbage( "count" )
 		local t = SysTime()
@@ -187,12 +202,29 @@ if CLIENT then
 
 		render.SetMaterial(lasermat)
 		for k, trace in ipairs(self.traces) do
-			trace_draw(trace, cull_distance)
+			local col = nil
+			if trace == look_at_trace then col = highlighted_color end
+
+			local event = self.trace_to_io[trace]
+			if not event then col = trace_color_dead end
+			if not event.from:ExistsOnServer() then col = trace_color_dead end
+			if not event.to:ExistsOnServer() then col = trace_color_dead end
+
+			trace_draw(trace, cull_distance, col)
 		end
 
 		-- Draw Entities
 
 		render.ClearDepth()
+
+		if look_at_trace ~= nil then
+			local event = self.trace_to_io[look_at_trace]
+			if event ~= nil then
+				event.from:Draw()
+				event.to:Draw()
+			end
+		end
+
 		render.SetMaterial(lasermat)
 		for k, trace in ipairs(self.traces) do
 			trace_draw_flashes(trace, cull_distance)
@@ -205,29 +237,21 @@ if CLIENT then
 
 		--_G.G_GARBAGE = collectgarbage( "count" ) - gc0
 
+		LocalPlayer().look_at_trace = nil
 		if LocalPlayer():GetActiveTrace() == nil then
 			local hitTrace, pos, point = self:GetTraceForRay( eye, forward, vray_result, 300 )
 			if hitTrace then
+				
 				local along = (pos - point.pos):Dot( point.normal )
 				local v = point.pos + point.normal * along
 				--print(t)
+				LocalPlayer().look_at_trace = hitTrace
+				LocalPlayer().look_at_along = along
 				render.SetMaterial(lasermat)
 				hitTrace:Draw(cull_distance, Color(200,210,255), 15, point.along + along - 30, point.along + along + 30)
 				--hitTrace:Draw( blip_color, 10, t - 30, t + 30 )
 
 				--render.DrawLine(Vector(0,0,0), v)
-
-				-- FIXME: Do this better
-				if input.IsMouseDown(MOUSE_LEFT) then
-					if not was_mouse_down then
-						print("DO IT")
-						--wt_ionet.RequestRideTrace( hitTrace, point.along + along )
-						was_mouse_down = true
-					end
-				else
-					was_mouse_down = false
-				end
-
 			end
 		end
 
@@ -243,6 +267,14 @@ function New(...)
 
 end
 
+if wt_bsp and wt_bsp.GetCurrent() ~= nil then
+
+	print("Create IO World")
+	wt_bsp.GetCurrent().iograph = wt_iograph.New( wt_bsp.GetCurrent() )
+	wt_bsp.GetCurrent().ioworld = New( wt_bsp.GetCurrent().iograph )
+
+end
+
 if CLIENT then
 
 	local viewEnable = CreateConVar(
@@ -252,6 +284,11 @@ if CLIENT then
 
 	local function ShouldDrawIOView()
 		if viewEnable:GetBool() then return true end
+
+		local weapon = LocalPlayer():GetActiveWeapon()
+		if IsValid(weapon) and weapon:GetClass() == "weapon_iotool" then
+			return true
+		end
 
 		return false
 	end
@@ -301,14 +338,6 @@ if CLIENT then
 
 	end)
 
-	if wt_bsp and wt_bsp.GetCurrent() ~= nil then
-
-		print("Create IO World")
-		wt_bsp.GetCurrent().iograph = wt_iograph.New( wt_bsp.GetCurrent() )
-		wt_bsp.GetCurrent().ioworld = New( wt_bsp.GetCurrent().iograph )
-
-	end
-
 	local invert_color_mod = {
 		[ "$pp_colour_addr" ] = -1,
 		[ "$pp_colour_addg" ] = -1,
@@ -321,6 +350,55 @@ if CLIENT then
 		[ "$pp_colour_mulb" ] = 0
 	}
 
+	local function DrawTraceInfo(trace, world)
+
+		local output = world.trace_to_io[trace]
+		if output then
+
+			local zone = wt_textfx.Box(ScrW()/2, ScrH()/2, 100, 100)
+				:Pad(-10)
+
+			local title = wt_textfx.Builder(output.from:GetName(), "WTStatusFont")
+			:Box()
+			:HAlignTo(zone, "left")
+			:VAlignTo(zone, "top")
+
+			local from = wt_textfx.Builder(output.event, "WTStatusFontSmall")
+			:Box()
+			:HAlignTo(title, "left")
+			:VAlignTo(title, "after")
+
+			local to = wt_textfx.Builder(output.to:GetName() .. "." .. output.func, "WTStatusFontSmall")
+			:Box()
+			:HAlignTo(from, "left")
+			:VAlignTo(from, "after")
+
+			local frame = wt_textfx.BuilderBox(title, from, to)
+			:Pad(8)
+			frame:DrawRounded(0,0,0,120,8)
+
+			title:Draw()
+			from:Draw()
+			to:Draw()
+
+		end
+
+	end
+
+	hook.Add( "KeyPress", "wt_interact", function( ply, key )
+		if key == IN_ATTACK or key == IN_ATTACK2 then
+			print("Interact")
+			
+			local mode = (key == IN_ATTACK) and 0 or 1
+			local trace = LocalPlayer().look_at_trace
+			if trace ~= nil then
+				wt_ionet.PlayerInteractTrace( trace, LocalPlayer().look_at_along, mode )
+				ply:EmitSound( "buttons/button3.wav" )
+			else
+				ply:EmitSound( "Weapon_Pistol.Empty" )
+			end
+		end
+	end )
 	
 	hook.Add("HUDPaint", "wt_ioworld", function()
 
@@ -417,6 +495,11 @@ if CLIENT then
 		surface.DrawRect( ScrW()/2 - 1, ScrH()/2 - 5, 2,10 )
 
 		cam.End2D()
+
+		local trace = LocalPlayer().look_at_trace
+		if trace ~= nil then
+			DrawTraceInfo(trace, world)
+		end
 
 	end)
 

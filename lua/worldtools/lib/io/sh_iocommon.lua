@@ -2,6 +2,12 @@ AddCSLuaFile()
 
 module( "wt_iocommon", package.seeall )
 
+if SERVER then
+
+	resource.AddFile("gamemodes/worldtools/content/halflife_source.fgd")
+
+end
+
 FGDClasses = {}
 
 local function lines(str)
@@ -24,9 +30,9 @@ local argListMatch = "(%w+%([^%)]*%))"
 local argKVMatch = "(%w+)%(([^%)]*)%)"
 local argMultiMatch = "[^,%s]+"
 
-local function parseFGD( fgd )
+local function parseFGD( fgd, path )
 
-	local f = file.Open( fgd, "rb", "BASE_PATH" )
+	local f = file.Open( fgd, "rb", path or "BASE_PATH" )
 	if f then
 		local targetClass = nil
 		for x in lines( f:Read( f:Size() ) ) do
@@ -130,6 +136,7 @@ local start = SysTime()
 parseFGD("bin/base.fgd")
 parseFGD("bin/halflife2.fgd")
 parseFGD("bin/garrysmod.fgd")
+parseFGD("gamemodes/worldtools/content/halflife_source.fgd", "THIRDPARTY")
 
 inheritBaseClasses(classes)
 
@@ -143,27 +150,6 @@ print("LOADING FGDs TOOK: " .. (SysTime() - start) .. " seconds")
 end]]
 
 FGDClasses = classes
-
--- func_train for hl-source
-FGDClasses["func_train"] = table.Copy(FGDClasses["func_tracktrain"])
-FGDClasses["func_train"].inputs["StartForward"] = nil
-FGDClasses["func_train"].inputs["StartBackward"] = nil
-FGDClasses["func_train"].inputs["TeleportToPathTrack"] = nil
-FGDClasses["func_train"].inputs["Start"] = "void"
-FGDClasses["func_train"].inputs["SetSpeed"] = nil
-FGDClasses["func_train"].inputs["SetSpeedDir"] = nil
-FGDClasses["func_train"].inputs["SetSpeedDirAccel"] = nil
-FGDClasses["func_train"].inputs["SetSpeedReal"] = nil
-FGDClasses["func_train"].inputs["SetSpeedForwardModifier"] = nil
-FGDClasses["func_train"].outputs["OnNextPoint"] = nil
-FGDClasses["func_train"].outputs["OnStart"] = nil
-
-FGDClasses["func_pushable"] = {
-	classname = "func_pushable",
-	classtype = "SolidClass",
-	inputs = {},
-	outputs = {},
-}
 
 local proxy_name = "__wt_io_proxy"
 local function bindGraphIOToProxy( graph )
@@ -210,6 +196,35 @@ end
 
 if SERVER then
 
+	local function BindEntityToSink(entity, class)
+
+		if not IsValid(entity) then print("FAILED TO BIND: " .. tostring(class)) return end
+		if entity:GetClass() == "wt_io_proxy" then return end
+		if entity.bound_to_proxy then return end
+		entity.bound_to_proxy = true
+
+		print("Bind To Sink: " .. tostring(entity) .. " : " .. tostring(entity:MapCreationID()))
+
+		local fgd = FGDClasses[entity:GetClass()]
+		if fgd then
+
+			for ev,output in pairs(fgd.outputs) do
+
+				--print("BIND: " .. tostring(ev))
+				local outputStr = string.format(
+					"%s %s,wt_io_sink_%s,,0,-1", 
+					ev,
+					proxy_name,
+					ev)
+
+				entity:Fire("AddOutput", outputStr)
+
+			end
+
+		end
+
+	end
+
 	local function SetupIOListener()
 
 		print("****SetupIOListener****")
@@ -226,9 +241,48 @@ if SERVER then
 
 		bindGraphIOToProxy( wt_bsp.GetCurrent().iograph )
 
+		for _, ent in ipairs(ents.GetAll()) do
+			BindEntityToSink(ent, ent:GetClass())
+		end
+
 	end
 	hook.Add("InitPostEntity", "wt_io_setuplistener", SetupIOListener)
 	hook.Add("PostCleanupMap", "wt_io_listenercleanup", SetupIOListener)
+
+	local function BlockInputs(ent, input, activator, caller, value)
+		return false
+	end
+	hook.Add("AcceptInput", "wt_io_blockinputs", BlockInputs)
+
+	local function SetupEntity(entity)
+
+		if not IsValid(entity) then return end
+
+		local class = entity:GetClass()
+		--timer.Simple(0, function() BindEntityToSink(entity, class) end)
+		BindEntityToSink(entity, class)
+
+	end
+	hook.Add("OnEntityCreated", "wt_io_entitycreate", SetupEntity)
+
+	local function RemovedEntity(entity)
+
+		print("Removed: " .. tostring(entity:GetName()) .. " : " .. entity:GetClass())
+
+	end
+	hook.Add("EntityRemoved", "wt_io_entityremoved", RemovedEntity)
+
+	local function StripIO(entity, key, value)
+
+		--print(tostring(entity) .. "." .. tostring(key) .. " = " .. tostring(value))
+
+		local fgd = FGDClasses[entity:GetClass()]
+		if fgd then
+			if fgd.outputs[key] then return "" end
+		end
+
+	end
+	hook.Add("EntityKeyValue", "wt_io_strip", StripIO)
 
 end
 

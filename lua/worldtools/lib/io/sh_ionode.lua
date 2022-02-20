@@ -221,7 +221,7 @@ function meta:GetPos()
 end
 
 function meta:GetIndex() return self.index end
-function meta:GetName() return self.name or "<" .. self:GetClass() .. ">" end
+function meta:GetName() return self.name or "<" .. self:GetClass() .. "[" .. self.index .. "]>" end
 function meta:GetClass() return self.classname or "__unknown__" end
 function meta:GetOutputs() return self.outputs end
 function meta:GetInputs() return self.inputs end
