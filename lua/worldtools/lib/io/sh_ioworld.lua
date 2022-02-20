@@ -179,7 +179,7 @@ if CLIENT then
 	function meta:DrawEntities()
 		for ent in self.graph:Ents() do
 			if self:ShouldDrawEnt( ent ) then
-				ent:Draw()
+				ent:Update()
 			end
 		end
 	end
@@ -239,7 +239,7 @@ if CLIENT then
 
 		LocalPlayer().look_at_trace = nil
 		if LocalPlayer():GetActiveTrace() == nil then
-			local hitTrace, pos, point = self:GetTraceForRay( eye, forward, vray_result, 300 )
+			local hitTrace, pos, point = self:GetTraceForRay( eye, forward, vray_result, cull_distance )
 			if hitTrace then
 				
 				local along = (pos - point.pos):Dot( point.normal )
@@ -282,7 +282,7 @@ if CLIENT then
 		{ FCVAR_CHEAT }, 
 		"Toggle drawing the io view")
 
-	local function ShouldDrawIOView()
+	function ShouldDrawIOView()
 		if viewEnable:GetBool() then return true end
 
 		local weapon = LocalPlayer():GetActiveWeapon()

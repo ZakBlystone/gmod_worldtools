@@ -173,7 +173,8 @@ function meta:BuildBrushModel()
 		modelent:SetPos(ent.origin or Vector(0,0,0))
 		local min, max = modelent:GetModelBounds()
 		modelent:SetRenderBounds(min, max)
-		modelent:SetNoDraw(true) -- #TODO: Set to false, let engine handle it?
+		modelent:SetNoDraw(false)
+		modelent:SetRenderMode(RENDERMODE_TRANSTEXTURE)
 
 		local brushes = {}
 		if ent.bmodel then
@@ -193,6 +194,8 @@ function meta:BuildBrushModel()
 		modelent.IOBrushMatrix = Matrix()
 
 		function modelent:RenderOverride()
+
+			if not wt_ioworld.ShouldDrawIOView() then return end
 
 			local mtx = self.IOBrushMatrix
 			mtx:SetTranslation(self:GetPos() )
@@ -271,7 +274,7 @@ end
 
 local angleIdent = Angle(0,0,0)
 
-function meta:Draw()
+function meta:Update()
 
 	if not self:ExistsOnServer() then return end
 
@@ -304,7 +307,18 @@ function meta:Draw()
 
 		self.model:SetPos( pos )
 		self.model:SetAngles( ang )
+
+	end
+
+end
+
+function meta:Draw()
+
+
+	if self.model then
+
 		self.model:DrawModel()
+
 	end
 
 	--debugoverlay.Text( self.pos, self.classname .. ": " .. self.index, 0.01, false )
