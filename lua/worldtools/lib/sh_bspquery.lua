@@ -3,32 +3,24 @@ AddCSLuaFile()
 module( "wt_bsp", package.seeall )
 
 local map = wt_bsp.GetCurrent()
-
---[[for k,v in pairs( map[wt_bsp.LUMP_TEXINFO] ) do
-	--if string.find( v.texdata.material, "TOOLS/" ) then PrintTable(v) end
-end
-
-for k,v in pairs( map[wt_bsp.LUMP_TEXDATA_STRING_DATA] ) do
-	if string.find( v, "TOOLS/" ) then print(v) end
-end
-
-for k,v in pairs( map[wt_bsp.LUMP_TEXDATA] ) do
-	if string.find( v.material, "TOOLS/" ) then PrintTable(v) end
-end]]
+local vmeta = FindMetaTable("Vector")
+local vdot = vmeta.Dot
+local band = bit.band
+local bor = bit.bor
 
 local function findBrushSide( leaf, pos )
 
-	for k, brush in pairs( leaf.brushes ) do
+	for k, brush in ipairs( leaf.brushes ) do
 
-		if bit.band( brush.contents, leaf.contents ) == 0 then continue end --CONTENTS_DETAIL
+		if band( brush.contents, leaf.contents ) == 0 then continue end
 
 		local inside = true
 		local bside = nil
 		local g = -9999
-		for _, side in pairs( brush.sides ) do
+		for _, side in ipairs( brush.sides ) do
 
 			local pln = side.plane.back
-			local d = pos:Dot( pln.normal ) - pln.dist
+			local d = vdot( pos, pln.normal ) - pln.dist
 			if d > 0.01 then inside = false end
 			if d > g then bside = side g = d end
 
@@ -47,11 +39,11 @@ local function traceBrushSides( brush, tw )
 	local last = 999999
 	local testside = nil
 
-	for _, side in pairs( brush.sides ) do
+	for _, side in ipairs( brush.sides ) do
 
 		local pln = side.plane.back
-		local denom = tw.dir:Dot( pln.normal )
-		local dist = pln.dist - pln.normal:Dot( tw.pos )
+		local denom = vdot( tw.dir, pln.normal )
+		local dist = pln.dist - vdot( pln.normal, tw.pos )
 
 		if denom ~= 0.0 then
 
@@ -62,8 +54,8 @@ local function traceBrushSides( brush, tw )
 					testside = side
 					first = t
 				end
-			else
-				last = math.min( last, t )
+			elseif t < last then
+				last = t
 			end
 
 		end
@@ -81,10 +73,10 @@ local function traceBrushes( leaf, tw )
 	local bbrush = nil
 	local bside = nil
 
-	for _, brush in pairs( leaf.brushes ) do
+	for _, brush in ipairs( leaf.brushes ) do
 
-		if bit.bor( brush.contents, tw.mask ) ~= tw.mask then continue end --CONTENTS_DETAIL
-		if bit.band( brush.contents, CONTENTS_DETAIL ) == 0 then continue end
+		if bor( brush.contents, tw.mask ) ~= tw.mask then continue end --CONTENTS_DETAIL
+		if band( brush.contents, CONTENTS_DETAIL ) == 0 then continue end
 
 		local side, t = traceBrushSides( brush, tw )
 		if side then
@@ -103,24 +95,17 @@ local function traceBrushes( leaf, tw )
 
 end
 
+local leafStack = {}
+local leafStackNum = 0
+for i=1, 100 do leafStack[i] = {} end
 function traceNode( node, tw )
 
 	if node == nil then return end
-	local stack = {}
-	local pos = Vector(tw.pos)
-	local dir = Vector(tw.dir)
-	local inv = nil
-
-	if tw.mtx then
-		inv = tw.mtx:Copy()
-		inv:Invert()
-
-		inv:Transform3( pos, 1, pos )
-		inv:Transform3( dir, 0, dir )
-	end
-
+	local pos = tw.ipos or tw.pos
+	local dir = tw.idir or tw.dir
 	local steps = 0
 
+	leafStackNum = 0
 	tw.t = tw.tmax
 
 	local out = 999
@@ -133,8 +118,8 @@ function traceNode( node, tw )
 		if not node.is_leaf then
 
 			local pln = node.plane
-			local denom = dir:Dot( pln.normal )
-			local dist = pln.dist - pln.normal:Dot( pos )
+			local denom = vdot( dir, pln.normal )
+			local dist = pln.dist - vdot( pln.normal, pos )
 			local near = dist <= 0
 
 			if denom ~= 0.0 then
@@ -144,10 +129,14 @@ function traceNode( node, tw )
 
 					if t >= tw.tmin then
 
-						table.insert(stack, {
-							node = node.children[ near and 2 or 1 ],
-							tmax = tw.tmax,
-						})
+						leafStackNum = leafStackNum + 1
+						local st = leafStack[leafStackNum]
+						if not st then
+							st = {}
+							leafStack[leafStackNum] = st
+						end
+						st.node = node.children[ near and 2 or 1 ]
+						st.tmax = tw.tmax
 						tw.tmax = t
 
 					else
@@ -164,9 +153,8 @@ function traceNode( node, tw )
 
 		else
 
-			if node.has_detail_brushes then --bit.band( CONTENTS_DETAIL, tw.mask ) ~= 0 and
+			if node.has_detail_brushes then
 
-				--print(CurTime() .. "TEST DETAILS")
 				local side, brush = traceBrushes( node, tw )
 
 				if side then
@@ -174,7 +162,9 @@ function traceNode( node, tw )
 					tw.leaf = node
 					tw.t = tw.tmin
 					tw.Hit = true
-					tw.HitPos = pos + dir * tw.t
+					tw.HitPos = Vector(dir) --pos + dir * tw.t
+					tw.HitPos:Mul(tw.t)
+					tw.HitPos:Add(pos)
 					tw.HitWorld = true
 					tw.Brush = brush
 					tw.Side = side
@@ -183,13 +173,16 @@ function traceNode( node, tw )
 
 			end
 
-			if not tw.hit and bit.band( node.contents, tw.mask ) ~= 0 then
+			if not tw.hit and band( node.contents, tw.mask ) ~= 0 then
 
 				tw.hit = true
 				tw.leaf = node
 				tw.t = tw.tmin
 				tw.Hit = true
-				tw.HitPos = pos + dir * tw.t
+				tw.HitPos = Vector(dir) --pos + dir * tw.t
+				tw.HitPos:Mul(tw.t)
+				tw.HitPos:Add(pos)
+
 				tw.HitNormal = Vector(0,0,1)
 				tw.HitWorld = not tw.Entity
 
@@ -205,18 +198,14 @@ function traceNode( node, tw )
 					tw.Contents = tw.Brush.contents
 				end
 
-				if inv then
-					tw.mtx:Transform3( tw.HitPos, 1, tw.HitPos )
-					tw.mtx:Transform3( tw.HitNormal, 0, tw.HitNormal )
-				end
 				return tw
 
 			end
 
 
-			if #stack == 0 then return tw end
-			local top = stack[#stack]
-			table.remove( stack, #stack )
+			if leafStackNum == 0 then return tw end
+			local top = leafStack[leafStackNum]
+			leafStackNum = leafStackNum - 1
 
 			tw.tmin = tw.tmax
 			node = top.node
@@ -241,53 +230,72 @@ end
 
 local filterMap = {}
 local meta = getmetatable( map )
+local trmtx = Matrix()
+local iposvec = Vector()
+local idirvec = Vector()
+local identVector = Vector()
+local identAngle = Angle()
 function meta:Trace( tdata)
+	local _tmin, _tmax = tdata.tmin, tdata.tmax
 	local tdatacopy = table.Copy(tdata)
-	local res = traceNode( self.models[1].headnode, tdata )
-	buildFilterMap(tdata.filter, filterMap)
+
+	traceNode( self.models[1].headnode, tdata )
 
 	if not tdata.ignoreents then
 		for k,v in pairs( self.entities ) do
-			if filterMap[v.classname] then continue end
+			if tdata.filter and tdata.filter[v.classname] then continue end
 
 			if v.bmodel then
-				local pos = v.origin and Vector(v.origin)
-				local ang = v.angles and Angle(v.angles)
-
-				-- If this bmodel has an existent entity analog in the world
-				-- adopt the entity's position/angles
-				local realEnts = wt_bmodelmap.GetEntity(v.bmodel.id - 1)
-				if realEnts then
-
-					-- TODO: Potentially multiple entities with the same bmodel (but rare)
-					-- For now just grab the first one, but should probably handle this later
-					local _, real = next(realEnts)
-					if IsValid(real) then
-						pos = real:GetPos()
-						ang = real:GetAngles()
-					end
+				local pos = v.origin
+				local ang = v.angles
+				local real = ents.GetMapCreatedEntity(v.index+1234)
+				if IsValid(real) then
+					pos = real:GetPos()
+					ang = real:GetAngles()
 				end
 
-				local d = table.Copy(tdatacopy)
+				local d = tdatacopy
+				d.tmin = _tmin
+				d.tmax = _tmax
+				d.hit = false
 
 				d.Entity = v
-				d.pos = Vector(d.pos)
-				d.dir = Vector(d.dir)
+				d.ipos = iposvec
+				d.idir = idirvec
 
-				local mtx = Matrix()
-				mtx:SetTranslation( pos or Vector(0,0,0) )
-				mtx:SetAngles( ang or Angle(0,0,0) )
-				d.mtx = mtx
+				trmtx:SetTranslation( pos or identVector )
+				trmtx:SetAngles( ang or identAngle )
+				trmtx:Invert()
+				trmtx:Transform3( d.pos, 1, d.ipos )
+				trmtx:Transform3( d.dir, 0, d.idir )
 
 				traceNode( v.bmodel.headnode, d )
-				d.Steps = (res and (d.Steps + res.Steps)) or d.Steps
-				res = (res and res.t < d.t) and res or d
-				--print("yo: ", v.bmodel.id, tostring(v.origin), d.hit)
+
+				if d.hit then
+					trmtx:Invert()
+					trmtx:Transform3( d.HitPos, 1, d.HitPos )
+					trmtx:Transform3( d.HitNormal, 0, d.HitNormal )
+				end
+
+				if tdata.t >= d.t then
+					tdata.HitPos = d.HitPos
+					tdata.HitNormal = d.HitNormal
+					tdata.t = d.t
+					tdata.TexInfo = d.TexInfo
+					tdata.Contents = d.Contents
+					tdata.Brush = d.Brush
+					tdata.Side = d.Side
+					tdata.IsDetail = d.IsDetail
+					tdata.Entity = d.Entity
+					tdata.HitWorld = d.HitWorld
+					tdata.Steps = (tdata.Steps or 0) + d.Steps
+				end
+
 			end
 		end
 	end
 
-	return res
+	return tdata
 end
 
 
@@ -392,11 +400,13 @@ hook.Add( "PostDrawOpaqueRenderables", "dbgquery", function( bdepth, bsky )
 
 	--if true then return end
 
-	local mask = bit.bor( MASK_SOLID, CONTENTS_DETAIL )
-	mask = bit.bor( mask, CONTENTS_GRATE )
-	mask = bit.bor( mask, CONTENTS_TRANSLUCENT )
+	local mask = bor( MASK_SOLID, CONTENTS_DETAIL )
+	mask = bor( mask, CONTENTS_GRATE )
+	mask = bor( mask, CONTENTS_TRANSLUCENT )
 	--mask = bit.bor( mask, CONTENTS_PLAYERCLIP )
 	--mask = bit.bor( mask, CONTENTS_MONSTERCLIP )
+
+	local begin = SysTime()
 
 	local res = map:Trace({
 		pos = LocalPlayer():EyePos(),
@@ -406,6 +416,8 @@ hook.Add( "PostDrawOpaqueRenderables", "dbgquery", function( bdepth, bsky )
 		mask = mask,
 		--ignoreents = true,
 	} )
+
+	print("TRACE TOOK: " .. (SysTime() - begin) * 1000 .. "ms" )
 
 
 	if res then
