@@ -140,16 +140,19 @@ function GetOutputTableForEntity( ent )
 
 end
 
-function meta:Init( ent )
+function meta:Init( ent, graph )
 
 	self.ent = ent
 	self.name = ent.targetname
 	self.classname = ent.classname
 	self.pos = ent.origin or Vector(0,0,0)
+	self.angles = ent.angles or Angle(0,0,0)
 	self.index = ent.index
+	self.parentname = ent.parentname
 	self.outputs = {}
 	self.inputs = {}
 	self.onMoved = {}
+	self.graph = graph
 
 	self:BuildBrushModel()
 	return self
@@ -216,7 +219,38 @@ function meta:GetPos()
 	local ent = self:GetEntity()
 	if IsValid(ent) then return ent:GetPos() end
 
-	return self.pos 
+	local parent = self:GetParent()
+	if parent ~= nil then
+		local preal = parent:GetEntity()
+		if IsValid(preal) then
+			local lpos, lang = preal:GetPos(), preal:GetAngles()
+			local opos, oang = WorldToLocal(self.pos, self.angles, parent.pos, parent.angles)
+			local pos, ang = LocalToWorld(opos, oang, lpos, lang)
+			return pos
+		end
+	end
+
+	return self.pos
+
+end
+
+function meta:GetAngles() 
+
+	local ent = self:GetEntity()
+	if IsValid(ent) then return ent:GetAngles() end
+
+	local parent = self:GetParent()
+	if parent ~= nil then
+		local preal = parent:GetEntity()
+		if IsValid(preal) then
+			local lpos, lang = preal:GetPos(), preal:GetAngles()
+			local opos, oang = WorldToLocal(self.pos, self.angles, parent.pos, parent.angles)
+			local pos, ang = LocalToWorld(opos, oang, lpos, lang)
+			return ang
+		end
+	end
+
+	return self.angles
 
 end
 
@@ -227,6 +261,7 @@ function meta:GetOutputs() return self.outputs end
 function meta:GetInputs() return self.inputs end
 function meta:GetEntity() return ents.GetMapCreatedEntity(self.index+1234) end
 function meta:ExistsOnServer() return ents.ExistsOnServer(self.index+1234) end
+function meta:GetParent() return self.parent end
 
 function meta:Moved()
 	for _,v in pairs(self.onMoved) do
@@ -244,26 +279,31 @@ function meta:Draw()
 
 		--if self.ent.classname == "func_movelinear" then
 		local real = self:GetEntity()
+		local pos, ang
 		if IsValid(real) then
-			if self.lastPos ~= nil and self.lastPos ~= real:GetPos() then
-				self:Moved()
-			end
-
-			self.lastPos = real:GetPos()
-
-			self.model:SetPos( real:GetPos() )
-			self.model:SetAngles( real:GetAngles() )
+			pos, ang = real:GetPos(), real:GetAngles()
 		else
-			if self.lastPos ~= nil and self.lastPos ~= self.pos then
-				self:Moved()
-			end
-
-			self.lastPos = self.pos
-
-			self.model:SetPos( self.pos )
-			self.model:SetAngles( angleIdent )
+			pos, ang = self.pos, self.angles
 		end
-		--end
+
+		local parent = self:GetParent()
+		if parent ~= nil then
+			local preal = parent:GetEntity()
+			if IsValid(preal) then
+				local lpos, lang = preal:GetPos(), preal:GetAngles()
+				local opos, oang = WorldToLocal(self.pos, self.angles, parent.pos, parent.angles)
+				pos, ang = LocalToWorld(opos, oang, lpos, lang)
+			end
+		end
+
+		if self.lastPos ~= nil and self.lastPos ~= pos then
+			self:Moved()
+		end
+
+		self.lastPos = pos
+
+		self.model:SetPos( pos )
+		self.model:SetAngles( ang )
 		self.model:DrawModel()
 	end
 

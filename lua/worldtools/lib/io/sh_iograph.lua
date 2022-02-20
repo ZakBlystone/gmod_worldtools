@@ -55,7 +55,7 @@ function meta:Init( mapData )
 	wt_task.Yield("sub", "creating io nodes")
 
 	for k, ent in ipairs(self.ents) do
-		local node = wt_ionode.New( ent )
+		local node = wt_ionode.New( ent, self )
 		self.nodes[#self.nodes+1] = node
 		self.entsByID[node:GetIndex()] = node
 		wt_task.YieldPer(10, "progress", k / #self.ents)
@@ -96,6 +96,15 @@ function meta:Link()
 
 				wt_task.YieldPer(10, "progress", 1)
 
+			end
+
+		end
+
+		if ent.parentname then
+
+			for target in self:EntsByName(ent.parentname) do
+				ent.parent = target
+				break
 			end
 
 		end
