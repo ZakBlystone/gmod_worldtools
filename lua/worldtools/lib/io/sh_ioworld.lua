@@ -368,24 +368,31 @@ if CLIENT then
 			:HAlignTo(title, "left")
 			:VAlignTo(title, "after")
 
-			local to = wt_textfx.Builder(output.to:GetName() .. "." .. output.func, "WTStatusFontSmall")
+			local to = wt_textfx.Builder(output.to:GetName() .. "." .. output.func .. "(" .. tostring(output.param) .. ")", "WTStatusFontSmall")
 			:Box()
 			:HAlignTo(from, "left")
 			:VAlignTo(from, "after")
 
-			local frame = wt_textfx.BuilderBox(title, from, to)
+			local delay = wt_textfx.Builder("@" .. tostring(output.delay or 0) .. "s", "WTStatusFontSmall")
+			:Box()
+			:HAlignTo(to, "left")
+			:VAlignTo(to, "after")
+
+			local frame = wt_textfx.BuilderBox(title, from, to, delay)
 			:Pad(8)
 			frame:DrawRounded(0,0,0,120,8)
 
 			title:Draw()
 			from:Draw()
 			to:Draw()
+			delay:Draw()
 
 		end
 
 	end
 
 	hook.Add( "KeyPress", "wt_interact", function( ply, key )
+		if not ShouldDrawIOView() then return end
 		if key == IN_ATTACK or key == IN_ATTACK2 then
 			print("Interact")
 			
