@@ -2,12 +2,6 @@ AddCSLuaFile()
 
 module( "wt_iocommon", package.seeall )
 
-if SERVER then
-
-	resource.AddFile("gamemodes/worldtools/content/halflife_source.fgd")
-
-end
-
 FGDClasses = {}
 
 local function lines(str)
@@ -30,60 +24,74 @@ local argListMatch = "(%w+%([^%)]*%))"
 local argKVMatch = "(%w+)%(([^%)]*)%)"
 local argMultiMatch = "[^,%s]+"
 
-local function parseFGD( fgd, path )
+function parseFGDString( name, str )
+
+	if str == nil then 
+		print("FAILED TO LOAD: " .. tostring(name))
+		return
+	else
+		print("LOADED: " .. tostring(name))
+	end
+
+	local targetClass = nil
+	for x in lines( str ) do
+
+		local classtype, args, name = x:match(classMatch)
+		if classtype and name then
+			if targetClass then 
+				classes[targetClass.classname] = targetClass 
+			end
+			targetClass = { 
+				classname = name, 
+				classtype = classtype,
+				inputs = {},
+				outputs = {},
+				editorkeys = {},
+				baseclasses = {},
+			}
+
+			if args then
+				for arg in args:gmatch(argListMatch) do
+					local k,v = arg:match(argKVMatch)
+					if k == "base" then
+						local bases = {}
+						for base in v:gmatch(argMultiMatch) do
+							bases[#bases+1] = base
+						end
+						targetClass.baseclasses = bases
+					else
+						targetClass.editorkeys[k] = v
+					end
+				end
+			end
+		end
+
+		if targetClass then
+			if x[1] == ']' then
+				classes[targetClass.classname] = targetClass
+				targetClass = nil
+			else
+				local output, param = x:match(outputMatch)
+				if output then
+					targetClass.outputs[output] = param
+				end
+				local input, param = x:match(inputMatch)
+				if input then
+					targetClass.inputs[input] = param
+				end
+			end
+		end
+
+	end
+
+end
+
+function parseFGD( fgd, path )
 
 	local f = file.Open( fgd, "rb", path or "BASE_PATH" )
 	if f then
-		local targetClass = nil
-		for x in lines( f:Read( f:Size() ) ) do
-
-			local classtype, args, name = x:match(classMatch)
-			if classtype and name then
-				if targetClass then 
-					classes[targetClass.classname] = targetClass 
-				end
-				targetClass = { 
-					classname = name, 
-					classtype = classtype,
-					inputs = {},
-					outputs = {},
-					editorkeys = {},
-					baseclasses = {},
-				}
-
-				if args then
-					for arg in args:gmatch(argListMatch) do
-						local k,v = arg:match(argKVMatch)
-						if k == "base" then
-							local bases = {}
-							for base in v:gmatch(argMultiMatch) do
-								bases[#bases+1] = base
-							end
-							targetClass.baseclasses = bases
-						else
-							targetClass.editorkeys[k] = v
-						end
-					end
-				end
-			end
-
-			if targetClass then
-				if x[1] == ']' then
-					classes[targetClass.classname] = targetClass
-					targetClass = nil
-				else
-					local output, param = x:match(outputMatch)
-					if output then
-						targetClass.outputs[output] = param
-					end
-					local input, param = x:match(inputMatch)
-					if input then
-						targetClass.inputs[input] = param
-					end
-				end
-			end
-
-		end
+		str = f:Read( f:Size() )
+		parseFGDString(fgd, str)
 	end
 
 end
@@ -136,7 +144,8 @@ local start = SysTime()
 parseFGD("bin/base.fgd")
 parseFGD("bin/halflife2.fgd")
 parseFGD("bin/garrysmod.fgd")
-parseFGD("gamemodes/worldtools/content/halflife_source.fgd", "THIRDPARTY")
+
+include("../fgd/sh_halflife_source.lua")
 
 inheritBaseClasses(classes)
 
