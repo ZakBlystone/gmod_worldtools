@@ -421,3 +421,28 @@ wt_iocommon.parseFGDString(
 	util.Decompress(util.Base64Decode(text)),
 	"\n"
 )
+
+wt_iocommon.parseFGDString(
+	"func_train_patch",
+[[
+@SolidClass base(Targetname, Origin, RenderFields) line(255 255 0, targetname, target) = func_train: "An old entity leftover from Quake. It follows a series of path_corner entities."
+[
+	spawnflags(flags) =
+	[
+		8 : "Non-solid" : 0
+	]
+	target(target_destination) : "Spawn path_corner" : : "The name of the first path_corner in the train's path. The train will spawn at this path_corner."
+    speed(float) : "Speed" : "50" : "Speed at which the train moves."
+	noise1(sound) : "Movement Sound" : "Default.Null" : "The sound to play when the train moves. This must be specified, but can be set to 'Default.Null' to play no sound."
+	noise2(sound) : "Stop Sound" : "Default.Null" : "The sound to play when the train stops moving. This must be specified, but can be set to 'Default.Null' to play no sound."
+	volume(float) : "Sound volume (0-10)" : "10" : "Volume of the sounds emitted when moving and stopping."
+	dmg(float) : "Crush Damage" : "0" : "Amount of damage to deal to entities blocking the train."
+
+	// Inputs
+	input Toggle(void) : "Toggle movement"
+	input Start(void) : "Start movement"
+	input Stop(void) : "Stop movement"
+]
+]],
+	"\n"
+)
