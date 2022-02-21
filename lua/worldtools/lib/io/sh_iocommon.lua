@@ -19,11 +19,30 @@ end
 local classes = {}
 local classMatch = "^@(%w+)(.*)=%s-([%w_]+)"
 local classNameMatch = "=%s-([%w_]+)"
-local outputMatch = "^%s+output%s(%w+)%((%w+)%)"
-local inputMatch = "^%s+input%s(%w+)%((%w+)%)"
+local outputMatch = "^%s*output%s(%w+)%((%w+)%)"
+local inputMatch = "^%s*input%s(%w+)%((%w+)%)"
 local argListMatch = "(%w+%([^%)]*%))"
 local argKVMatch = "(%w+)%(([^%)]*)%)"
 local argMultiMatch = "[^,%s]+"
+local kvMatchFull = [[(%w+)%((%w+)%)%s*:%s*"([^"]*)"%s*:%s*"([^"]*)"]]
+local kvMatchPartial = [[(%w+)%((%w+)%)%s*:%s*"([^"]*)"]]
+
+local function tablesEqual(a,b)
+
+	for k,v in pairs(b) do
+		if not a[k] then return false end
+	end
+
+	for k,v in pairs(a) do
+		if not b[k] then return false end
+		if type(v) ~= type(b[k]) then return false end
+		if type(v) == "table" then
+			if not tablesEqual(v, b[k]) then return false end
+		end
+	end
+	return true
+
+end
 
 function parseFGDString( filename, str, newline )
 
@@ -37,6 +56,8 @@ function parseFGDString( filename, str, newline )
 	local targetClass = nil
 	for x in lines( str, newline ) do
 
+		if x:match("^%s*//") then continue end
+
 		local classtype, args, name = x:match(classMatch)
 		if classtype and name then
 			if targetClass then 
@@ -49,6 +70,7 @@ function parseFGDString( filename, str, newline )
 				outputs = {},
 				editorkeys = {},
 				baseclasses = {},
+				keyvalues = {},
 			}
 
 			if args then
@@ -71,17 +93,50 @@ function parseFGDString( filename, str, newline )
 
 		if targetClass then
 			if x[1] == ']' then
-				classes[targetClass.classname] = targetClass
+				if classes[targetClass.classname] then
+					if tablesEqual(classes[targetClass.classname], targetClass) then
+						--print("DUPLICATE CLASS: " .. targetClass.classname .. " from " .. filename)
+					else
+						--print("REDEFINED CLASS: " .. targetClass.classname .. " from " .. filename .. ", merging...")
+						table.Merge(classes[targetClass.classname], targetClass)						
+					end
+				else
+					classes[targetClass.classname] = targetClass
+				end
 				targetClass = nil
 			else
+
 				local output, param = x:match(outputMatch)
 				if output then
 					targetClass.outputs[output] = param
+					continue
 				end
+
 				local input, param = x:match(inputMatch)
 				if input then
 					targetClass.inputs[input] = param
+					continue
 				end
+
+				local key, type, desc, default = x:match(kvMatchFull)
+				if key then
+					targetClass.keyvalues[key] = {
+						type = type, 
+						desc = desc, 
+						default = default
+					}
+					continue
+				end
+
+				local key, type, desc = x:match(kvMatchPartial)
+				if key then
+					targetClass.keyvalues[key] = {
+						type = type, 
+						desc = desc
+					}
+					continue
+				end
+
 			end
 		end
 
