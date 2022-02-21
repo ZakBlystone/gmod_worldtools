@@ -418,5 +418,6 @@ ceM=]]
 
 wt_iocommon.parseFGDString(
 	"halflife_source", 
-	util.Decompress(util.Base64Decode(text))
+	util.Decompress(util.Base64Decode(text)),
+	"\n"
 )

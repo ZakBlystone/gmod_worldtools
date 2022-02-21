@@ -4,14 +4,15 @@ module( "wt_iocommon", package.seeall )
 
 FGDClasses = {}
 
-local function lines(str)
+local function lines(str, newline)
 	local setinel = 0
+	local newlen = string.len(newline or "\r\n")
 	return function()
-		local k = str:find("\r\n", setinel+1)
+		local k = str:find(newline or "\r\n", setinel+1)
 		if not k then return end
 		local b = setinel
 		setinel = k
-		return str:sub(b+2, k-1)
+		return str:sub(b+newlen, k-1)
 	end
 end
 
@@ -24,22 +25,22 @@ local argListMatch = "(%w+%([^%)]*%))"
 local argKVMatch = "(%w+)%(([^%)]*)%)"
 local argMultiMatch = "[^,%s]+"
 
-function parseFGDString( name, str )
+function parseFGDString( filename, str, newline )
 
 	if str == nil then 
-		print("FAILED TO LOAD: " .. tostring(name))
+		print("FAILED TO LOAD: " .. tostring(filename))
 		return
 	else
-		print("LOADED: " .. tostring(name))
+		print("LOADING: " .. tostring(filename))
 	end
 
 	local targetClass = nil
-	for x in lines( str ) do
+	for x in lines( str, newline ) do
 
 		local classtype, args, name = x:match(classMatch)
 		if classtype and name then
 			if targetClass then 
-				classes[targetClass.classname] = targetClass 
+				classes[targetClass.classname] = targetClass
 			end
 			targetClass = { 
 				classname = name, 
@@ -264,11 +265,6 @@ if SERVER then
 	end
 	hook.Add("InitPostEntity", "wt_io_setuplistener", SetupIOListener)
 	hook.Add("PostCleanupMap", "wt_io_listenercleanup", SetupIOListener)
-
-	local function BlockInputs(ent, input, activator, caller, value)
-		return false
-	end
-	hook.Add("AcceptInput", "wt_io_blockinputs", BlockInputs)
 
 	local function SetupEntity(entity)
 
