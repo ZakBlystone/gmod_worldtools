@@ -358,7 +358,7 @@ if CLIENT then
 			local zone = wt_textfx.Box(ScrW()/2, ScrH()/2, 100, 100)
 				:Pad(-10)
 
-			local title = wt_textfx.Builder(output.from:GetName(), "WTStatusFont")
+			local title = wt_textfx.Builder(output.from:GetName() .. " : " .. output.from:GetClass(), "WTStatusFont")
 			:Box()
 			:HAlignTo(zone, "left")
 			:VAlignTo(zone, "top")
@@ -393,7 +393,7 @@ if CLIENT then
 
 	hook.Add( "KeyPress", "wt_interact", function( ply, key )
 		if not ShouldDrawIOView() then return end
-		if not IsFirstTimePredicted() then return end
+		if not IsFirstTimePredicted() and not game.SinglePlayer() then return end
 		if key == IN_ATTACK or key == IN_ATTACK2 then
 			print("Interact")
 			

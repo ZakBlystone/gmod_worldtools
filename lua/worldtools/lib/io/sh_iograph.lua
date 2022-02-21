@@ -3,6 +3,7 @@ AddCSLuaFile()
 module( "wt_iograph", package.seeall )
 
 G_IOGRAPH_META = G_IOGRAPH_META or {}
+G_EVENTDATA_META = G_EVENTDATA_META or {}
 
 --[[
 
@@ -24,7 +25,7 @@ each output:
 
 ]]
 
-local eventDataMeta = {}
+local eventDataMeta = G_EVENTDATA_META
 eventDataMeta.__index = eventDataMeta
 
 function eventDataMeta:Fire(activator, caller, delay)
