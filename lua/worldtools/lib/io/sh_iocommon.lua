@@ -61,7 +61,9 @@ function parseFGDString( filename, str, newline )
 						end
 						targetClass.baseclasses = bases
 					else
-						targetClass.editorkeys[k] = v
+						if string.byte(v[1]) == nil then continue end
+						local text = v:match("\"*([^\"]*)\"*")
+						targetClass.editorkeys[k] = text
 					end
 				end
 			end
@@ -328,6 +330,8 @@ if CLIENT then
 
 	local tool_classes = {}
 	local tool_textures = {}
+	local point_textures = {}
+	local point_materials = {}
 	local generate_tool_textures = true
 	local tex_size = 128
 
@@ -365,7 +369,34 @@ if CLIENT then
 		end
 	end
 
+	local point_classes = {}
+	for k,v in pairs(FGDClasses) do
+		if v.classtype == "PointClass" then
+			--point_classes[#point_classes+1] = { v.classname, v.editorkeys and v.editorkeys.iconsprite or nil }
+			if v.editorkeys and v.editorkeys.iconsprite then
+				local tex = v.editorkeys.iconsprite:sub(1,-5)
+				point_textures[v.classname] = tex
+				point_materials[v.classname] = Material(tex)
+			end
+		end
+	end
+
 	table.sort(tool_classes)
+	table.sort(point_classes, function(a,b) return a[1] < b[1] end)
+
+	for k,v in pairs(point_textures) do
+
+		point_materials[k] = CreateMaterial("io_point_material_" .. k, "UnlitGeneric", {
+			["$basetexture"] = v,
+			["$vertexcolor"] = 1,
+			["$vertexalpha"] = 1,
+			["$model"] = 1,
+			["$additive"] = 1,
+			["$nocull"] = 0,
+			["$alpha"] = 0.5
+		})
+
+	end
 
 	local function GenerateToolTexture(class)
 
@@ -429,6 +460,12 @@ if CLIENT then
 			["$nocull"] = 0,
 			["$alpha"] = 0.5
 		})
+
+	end
+
+	function GetEntityIconMaterial(class)
+
+		return point_materials[class]
 
 	end
 

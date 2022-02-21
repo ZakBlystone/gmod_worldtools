@@ -315,12 +315,26 @@ function meta:Update()
 
 end
 
+function meta:HasIcon()
+
+	return wt_iocommon.GetEntityIconMaterial( self.classname ) ~= nil
+
+end
+
 function meta:Draw()
 
 
 	if self.model then
 
 		self.model:DrawModel()
+
+	end
+
+	local icon = wt_iocommon.GetEntityIconMaterial( self.classname )
+	if icon ~= nil then
+
+		render.SetMaterial(icon)
+		render.DrawSprite(self:GetPos(), 8, 8)
 
 	end
 

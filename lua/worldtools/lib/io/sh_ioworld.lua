@@ -181,6 +181,9 @@ if CLIENT then
 			if self:ShouldDrawEnt( ent ) then
 				ent:Update()
 			end
+			if ent:HasIcon() then
+				ent:Draw()
+			end
 		end
 	end
 
