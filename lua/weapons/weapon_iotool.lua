@@ -27,11 +27,6 @@ SWEP.Secondary.Ammo = "none"
 SWEP.DrawAmmo = false
 SWEP.AdminOnly = true
 
-game.AddParticles( "particles/hunter_flechette.pcf" )
-game.AddParticles( "particles/hunter_projectile.pcf" )
-
-local ShootSound = Sound( "NPC_Hunter.FlechetteShoot" )
-
 function SWEP:Initialize()
 
 	self:SetHoldType( "pistol" )
