@@ -393,6 +393,7 @@ if CLIENT then
 
 	hook.Add( "KeyPress", "wt_interact", function( ply, key )
 		if not ShouldDrawIOView() then return end
+		if not IsFirstTimePredicted() then return end
 		if key == IN_ATTACK or key == IN_ATTACK2 then
 			print("Interact")
 			
