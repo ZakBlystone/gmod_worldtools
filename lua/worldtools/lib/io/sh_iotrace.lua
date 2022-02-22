@@ -56,6 +56,9 @@ end
 
 function meta:BuildPath( direct )
 
+	-- Server doesn't need to build path
+	if SERVER then return end
+
 	self.points = {}
 
 	local base = self.from

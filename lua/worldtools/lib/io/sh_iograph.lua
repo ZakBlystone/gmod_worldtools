@@ -163,6 +163,22 @@ function meta:Ents()
 
 end
 
+function meta:RecentlyRendered()
+
+	local i = 1
+	local rt = RealTime()
+	return function()
+		local n = self.nodes[i]
+		while n and rt - n.lastRenderTime > 0.1 do 
+			i = i + 1
+			n = self.nodes[i]
+		end
+		i = i + 1
+		return n
+	end
+
+end
+
 function meta:EntsByClass( classname )
 
 	local i = 1
@@ -190,6 +206,75 @@ function meta:EntsByName( name )
 		i = i + 1
 		return n
 	end
+
+end
+
+
+local trmtx = Matrix()
+local ipos = Vector()
+local idir = Vector()
+local tw = {
+	tmax = 0,
+	tmin = 0,
+	mask = 0xFFFFFFFF,
+}
+function meta:VisualTrace(pos, dir, mindist, maxdist)
+
+	local t = maxdist
+	local hitEntity = nil
+	local hitPos = nil
+	local count = 0
+
+	for ent in self:RecentlyRendered() do
+
+		if ent:HasBounds() then
+
+			count = count + 1
+			ent:GetMatrix(trmtx)
+			trmtx:Invert()
+			trmtx:Transform3( pos, 1, ipos )
+			trmtx:Transform3( dir, 0, idir )
+
+			local min, max = ent:GetLocalBounds()
+			local hit, toi = IntersectRayBox(ipos, idir, min, max)
+			if hit then
+				if ent.ent.bmodel then
+
+					tw.tmin = 0
+					tw.tmax = maxdist
+					tw.ipos = ipos
+					tw.idir = idir
+					tw.hit = false
+					wt_bsp.traceNode(ent.ent.bmodel.headnode, tw)
+					if not tw.hit then continue end
+
+				end
+
+				if math.abs(t - toi) < 1 then
+					if hitEntity then
+						local d0 = (hitEntity:GetPos() - pos):GetNormalized():Dot(dir)
+						local d1 = (ent:GetPos() - pos):GetNormalized():Dot(dir)
+						if d0 > d1 then continue end
+					end
+				end
+
+				if toi < t + 0.01 and toi > 0 then
+					t = toi 
+					hitEntity = ent
+					hitPos = idir
+					hitPos:Mul(toi)
+					hitPos:Add(ipos)
+					trmtx:Transform3( hitPos, 1, hitPos )
+				end
+			end
+
+		end
+
+	end
+
+	--print("trace: " .. count .. " : " .. t .. " : " .. (hitEntity and hitEntity.index or -1))
+
+	return hitEntity, hitPos
 
 end
 

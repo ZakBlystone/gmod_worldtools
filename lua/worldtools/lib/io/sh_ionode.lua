@@ -153,13 +153,14 @@ function meta:Init( ent, graph )
 	self.inputs = {}
 	self.onMoved = {}
 	self.graph = graph
+	self.lastRenderTime = 0
 
-	self:BuildBrushModel()
+	self:MakeClientEntity()
 	return self
 
 end
 
-function meta:BuildBrushModel()
+function meta:MakeClientEntity()
 
 	if not CLIENT then return end
 
@@ -177,6 +178,7 @@ function meta:BuildBrushModel()
 		modelent:SetRenderBounds(min, max)
 		modelent:SetNoDraw(false)
 		modelent:SetRenderMode(RENDERMODE_TRANSTEXTURE)
+
 
 		local brushes = {}
 		if ent.bmodel then
@@ -208,9 +210,38 @@ function meta:BuildBrushModel()
 				render.SetColorModulation(1, 1, 1)
 				self.IOBrushMesh:Draw()
 			cam.PopModelMatrix()
+			me.lastRenderTime = RealTime()
 
 		end
+
 		self.model = modelent
+		self.localBounds = {min, max}
+
+	elseif self:HasIcon() then
+
+		local iconent = wt_csent.ManagedCSEnt("ionode_" .. self.index, Model("models/Combine_Helicopter/helicopter_bomb01.mdl"))
+		local icon = wt_iocommon.GetEntityIconMaterial( self.classname )
+
+		local min, max = Vector(-4,-4,-4), Vector(4,4,4)
+
+		iconent:SetPos(ent.origin or Vector(0,0,0))
+		iconent:SetRenderBounds(min, max)
+		iconent:SetNoDraw(false)
+		iconent:SetRenderMode(RENDERMODE_NORMAL)
+
+		function iconent:RenderOverride()
+
+			if icon ~= nil then
+
+				render.SetMaterial(icon)
+				render.DrawSprite(self:GetPos(), 8, 8)
+				me.lastRenderTime = RealTime()
+
+			end
+
+		end
+		self.model = iconent
+		self.localBounds = {min, max}
 
 	elseif validModel then
 
@@ -260,6 +291,36 @@ function meta:GetAngles()
 
 end
 
+function meta:GetMatrix(mtx)
+
+	mtx = mtx or Matrix()
+
+	local ent = self:GetEntity()
+	if IsValid(ent) then
+		mtx:SetTranslation(ent:GetPos())
+		mtx:SetAngles(ent:GetAngles())
+		return mtx
+	end
+
+	local parent = self:GetParent()
+	if parent ~= nil then
+		local preal = parent:GetEntity()
+		if IsValid(preal) then
+			local lpos, lang = preal:GetPos(), preal:GetAngles()
+			local opos, oang = WorldToLocal(self.pos, self.angles, parent.pos, parent.angles)
+			local pos, ang = LocalToWorld(opos, oang, lpos, lang)
+			mtx:SetTranslation(pos)
+			mtx:SetAngles(ang)
+			return mtx
+		end
+	end
+
+	mtx:SetTranslation(self.pos)
+	mtx:SetAngles(self.angles)
+	return mtx
+
+end
+
 function meta:GetIndex() return self.index end
 function meta:GetName() return self.name or "<" .. self:GetClass() .. "[" .. self.index .. "]>" end
 function meta:GetClass() return self.classname or "__unknown__" end
@@ -268,6 +329,8 @@ function meta:GetInputs() return self.inputs end
 function meta:GetEntity() return ents.GetMapCreatedEntity(self.index+1234) end
 function meta:ExistsOnServer() return ents.ExistsOnServer(self.index+1234) end
 function meta:GetParent() return self.parent end
+function meta:GetLocalBounds() return unpack(self.localBounds or {}) end
+function meta:HasBounds() return self.localBounds ~= nil end
 
 function meta:Moved()
 	for _,v in pairs(self.onMoved) do
@@ -330,13 +393,13 @@ function meta:Draw()
 
 	end
 
-	local icon = wt_iocommon.GetEntityIconMaterial( self.classname )
+	--[[local icon = wt_iocommon.GetEntityIconMaterial( self.classname )
 	if icon ~= nil then
 
 		render.SetMaterial(icon)
 		render.DrawSprite(self:GetPos(), 8, 8)
 
-	end
+	end]]
 
 	--debugoverlay.Text( self.pos, self.classname .. ": " .. self.index, 0.01, false )
 

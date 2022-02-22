@@ -182,7 +182,7 @@ if CLIENT then
 				ent:Update()
 			end
 			if ent:HasIcon() then
-				ent:Draw()
+				--ent:Draw()
 			end
 		end
 	end
@@ -192,6 +192,7 @@ if CLIENT then
 		local eye, forward = EyePos(), EyeAngles():Forward() 
 		local tracesDrawn = 0
 		local look_at_trace = LocalPlayer().look_at_trace
+		local look_at_ent = LocalPlayer().look_at_ent
 
 		local gc0 = collectgarbage( "count" )
 		local t = SysTime()
@@ -228,6 +229,10 @@ if CLIENT then
 			end
 		end
 
+		if look_at_ent ~= nil then
+			look_at_ent:Draw()
+		end
+
 		render.SetMaterial(lasermat)
 		for k, trace in ipairs(self.traces) do
 			trace_draw_flashes(trace, cull_distance)
@@ -241,20 +246,35 @@ if CLIENT then
 		--_G.G_GARBAGE = collectgarbage( "count" ) - gc0
 
 		LocalPlayer().look_at_trace = nil
-		if LocalPlayer():GetActiveTrace() == nil then
-			local hitTrace, pos, point = self:GetTraceForRay( eye, forward, vray_result, cull_distance )
-			if hitTrace then
-				
-				local along = (pos - point.pos):Dot( point.normal )
-				local v = point.pos + point.normal * along
-				--print(t)
-				LocalPlayer().look_at_trace = hitTrace
-				LocalPlayer().look_at_along = along
-				render.SetMaterial(lasermat)
-				hitTrace:Draw(cull_distance, Color(200,210,255), 15, point.along + along - 30, point.along + along + 30)
-				--hitTrace:Draw( blip_color, 10, t - 30, t + 30 )
+		LocalPlayer().look_at_ent = nil
 
-				--render.DrawLine(Vector(0,0,0), v)
+
+
+		if LocalPlayer():GetActiveTrace() == nil then
+
+			local hitEnt, hitPos = self.graph:VisualTrace(eye, forward, 0, 5000)
+			if hitEnt then
+
+				LocalPlayer().look_at_ent = hitEnt
+				LocalPlayer().look_at_pos = hitPos
+
+			else
+
+				local hitTrace, pos, point = self:GetTraceForRay( eye, forward, vray_result, cull_distance )
+				if hitTrace then
+					
+					local along = (pos - point.pos):Dot( point.normal )
+					local v = point.pos + point.normal * along
+					--print(t)
+					LocalPlayer().look_at_trace = hitTrace
+					LocalPlayer().look_at_along = along
+					render.SetMaterial(lasermat)
+					hitTrace:Draw(cull_distance, Color(200,210,255), 15, point.along + along - 30, point.along + along + 30)
+					--hitTrace:Draw( blip_color, 10, t - 30, t + 30 )
+
+					--render.DrawLine(Vector(0,0,0), v)
+				end
+
 			end
 		end
 
@@ -352,6 +372,24 @@ if CLIENT then
 		[ "$pp_colour_mulg" ] = 0,
 		[ "$pp_colour_mulb" ] = 0
 	}
+
+	local function DrawEntInfo(ent, world)
+
+		local zone = wt_textfx.Box(ScrW()/2, ScrH()/2, 100, 100)
+			:Pad(-10)
+
+		local title = wt_textfx.Builder(ent:GetName() .. " : " .. ent:GetClass(), "WTStatusFont")
+		:Box()
+		:HAlignTo(zone, "left")
+		:VAlignTo(zone, "top")
+
+		local frame = wt_textfx.BuilderBox(title)
+		:Pad(8)
+		frame:DrawRounded(0,0,0,120,8)
+
+		title:Draw()
+
+	end
 
 	local function DrawTraceInfo(trace, world)
 
@@ -510,6 +548,11 @@ if CLIENT then
 		local trace = LocalPlayer().look_at_trace
 		if trace ~= nil then
 			DrawTraceInfo(trace, world)
+		end
+
+		local ent = LocalPlayer().look_at_ent
+		if ent ~= nil then
+			DrawEntInfo(ent, world)
 		end
 
 	end)
