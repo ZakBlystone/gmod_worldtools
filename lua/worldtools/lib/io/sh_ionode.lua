@@ -231,6 +231,9 @@ function meta:MakeClientEntity()
 
 		function iconent:RenderOverride()
 
+			if not wt_ioworld.ShouldDrawIOView() then return end
+			if not me:ExistsOnServer() then return end
+
 			if icon ~= nil then
 
 				render.SetMaterial(icon)
