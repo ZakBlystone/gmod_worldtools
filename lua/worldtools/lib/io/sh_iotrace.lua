@@ -201,7 +201,6 @@ local vpos = Vector()
 local vup = Vector()
 local vnormal = Vector()
 
-
 local function vcross(a,b,c)
 
 	local ax, ay, az = vunpack(a)
@@ -267,7 +266,7 @@ function meta:TestRay(ox, oy, oz, dx, dy, dz, origin, dir, maxDist, distToLine)
 
 				-- only hit if close to segment "vertically"
 				if math.abs(y) < distToLine then
-					return hit, toi, point
+					return hit, toi, point, x, y
 				end
 
 			end
@@ -282,7 +281,9 @@ end
 
 function meta:GetIndex() return self.index end
 function meta:GetLength() return self.length end
-function meta:GetPointAlongPath( t )
+function meta:GetPointAlongPath( t, out )
+
+	out = out or Vector()
 
 	local acc = 0
 	local num = #self.points
@@ -291,7 +292,10 @@ function meta:GetPointAlongPath( t )
 		-- iterate along points until t is within range, then extrapolate
 		local point = self.points[i]
 		if acc + point.len > t or i == num then
-			return point.pos + point.normal * (t - acc), point.quat
+			vset(out, point.normal)
+			vmul(out, t - acc)
+			vadd(out, point.pos)
+			return out, point.quat
 		end
 		acc = acc + point.len
 
@@ -382,6 +386,8 @@ if CLIENT then
 	local base_trace_color2 = Color(180/4,0,255/4,255)
 	local blip_color = Color(255,180,50)
 	local blip_color2 = Color(255/2,180/2,50)
+	local transparent = Color(0,0,0,0)
+	local lerped = Color(0,0,0,0)
 	local MIN_DELAY = 0.5
 
 	blip_color, base_trace_color = base_trace_color, blip_color
@@ -464,6 +470,7 @@ if CLIENT then
 				addBeam(vstart, width, 0, color)
 				addBeam(vend, width, 0, color)
 				endBeam()
+				--render.DrawLine(vstart, vend, color)
 			end
 
 			if term then break end
@@ -472,6 +479,7 @@ if CLIENT then
 
 	end
 
+	local blip_pos = Vector()
 	function meta:DrawBlips()
 
 		local tracelen = self:GetLength()
@@ -501,7 +509,7 @@ if CLIENT then
 				for k=1, steps do
 
 					local time2 = math.Clamp( time - (k * space), 0, tracelen )
-					local pos = self:GetPointAlongPath( time2 )
+					local pos = self:GetPointAlongPath( time2, blip_pos )
 					local size = (8 - (k/steps) * 8 ) * blip_scale
 					if time2 == tracelen then size = size * 2 end
 					render.DrawSprite( pos, size, size, blip_color )
@@ -529,11 +537,12 @@ if CLIENT then
 
 			if t > blip.duration then
 
-				local flash = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
-				if flash > 0 then
-					local col = LerpColor(blip_color, Color(0,0,0,0), 1 - flash)
-					self:Draw( maxDist, col, 8, nil, nil, true )
-					self:Draw( maxDist, col, 16, nil, nil, true )
+				local fl = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
+				if fl > 0 then
+					local r,g,b,a = blip_color:Unpack()
+					lerped:SetUnpacked( r*fl, g*fl, b*fl, a*fl )
+					self:Draw( maxDist, lerped, 8, nil, nil, true )
+					self:Draw( maxDist, lerped, 16, nil, nil, true )
 				end
 
 			else

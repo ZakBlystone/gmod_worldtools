@@ -203,8 +203,8 @@ function meta:MakeClientEntity()
 			if not me:ExistsOnServer() then return end
 
 			local mtx = self.IOBrushMatrix
-			mtx:SetTranslation(self:GetPos() )
-			mtx:SetAngles(self:GetAngles() )
+			mtx:SetTranslation(self.RenderPos or self:GetPos() )
+			mtx:SetAngles(self.RenderAngles or self:GetAngles() )
 			cam.PushModelMatrix(mtx)
 				render.SetMaterial(self.IOBrushMaterial)
 				render.SetColorModulation(1, 1, 1)
@@ -237,7 +237,7 @@ function meta:MakeClientEntity()
 			if icon ~= nil then
 
 				render.SetMaterial(icon)
-				render.DrawSprite(self:GetPos(), 8, 8)
+				render.DrawSprite(self.RenderPos or self:GetPos(), 8, 8)
 				me.lastRenderTime = RealTime()
 
 			end
@@ -334,6 +334,7 @@ function meta:ExistsOnServer() return ents.ExistsOnServer(self.index+1234) end
 function meta:GetParent() return self.parent end
 function meta:GetLocalBounds() return unpack(self.localBounds or {}) end
 function meta:HasBounds() return self.localBounds ~= nil end
+function meta:WasRecentlyRendered() return self.lastRenderTime ~= nil and RealTime() - self.lastRenderTime < 0.1 end 
 
 function meta:Moved()
 	for _,v in pairs(self.onMoved) do
@@ -374,6 +375,9 @@ function meta:Update()
 
 		self.lastPos = pos
 
+		self.model.RenderPos = pos
+		self.model.RenderAngles = ang
+
 		self.model:SetPos( pos )
 		self.model:SetAngles( ang )
 
@@ -392,7 +396,7 @@ function meta:Draw()
 
 	if self.model then
 
-		self.model:DrawModel()
+		self.model:RenderOverride()
 
 	end
 

@@ -31,15 +31,6 @@ function meta:InteractTrace( ply, mode, trace, along )
 
 end
 
-function meta:ShouldDrawEnt( ent )
-
-	local inputs = ent:GetInputs()
-	local outputs = ent:GetOutputs()
-	--if #outputs == 0 and #inputs == 0 then return false end
-	return true
-
-end
-
 function meta:GetTraceByIndex( index )
 
 	return self.traces[index]
@@ -59,6 +50,8 @@ function meta:GetTraceForRay( origin, dir, result, maxDist )
 	local t = maxDist
 	local pick = nil
 	local point = nil
+	local hit_x = nil
+	local hit_y = nil
 
 	local test = wt_iotrace.G_IOTRACE_META.TestRay
 	local ox, oy, oz = origin:Unpack()
@@ -72,7 +65,7 @@ function meta:GetTraceForRay( origin, dir, result, maxDist )
 
 	for _, trace in ipairs(self.traces) do
 
-		local hit, toi, hitpoint = test(
+		local hit, toi, hitpoint, x, y = test(
 			trace, 
 			ox, oy, oz, 
 			dx, dy, dz, 
@@ -80,20 +73,26 @@ function meta:GetTraceForRay( origin, dir, result, maxDist )
 
 		if hit then
 
-			if toi < t then
-				t = toi
-				pick = trace
-				result:Set(dir)
-				result:Mul(toi)
-				result:Add(origin)
-				point = hitpoint
+			if hit_y then
+				local d0 = math.abs(y)
+				local d1 = math.abs(hit_y)
+				if d0 > d1 then continue end
 			end
+
+			t = toi
+			pick = trace
+			result:Set(dir)
+			result:Mul(toi)
+			result:Add(origin)
+			point = hitpoint
+			hit_x = x
+			hit_y = y
 
 		end
 
 	end
 
-	return pick, result, point
+	return pick, result, point, hit_x, hit_y
 
 end
 
@@ -169,6 +168,8 @@ if CLIENT then
 	local was_mouse_down = false
 	local lasermat = Material("effects/laser1.vmt")
 	local flaremat = Material("effects/blueflare1")
+	local spheremat = Material("metal2")
+	local spherecolor = Color(0,255,255,255)
 
 	local trace_draw = wt_iotrace.G_IOTRACE_META.Draw
 	local trace_draw_flashes = wt_iotrace.G_IOTRACE_META.DrawFlashes
@@ -176,14 +177,9 @@ if CLIENT then
 	local vray_result = Vector()
 	local cull_distance = 600
 
-	function meta:DrawEntities()
+	function meta:UpdateEntities()
 		for ent in self.graph:Ents() do
-			if self:ShouldDrawEnt( ent ) then
-				ent:Update()
-			end
-			if ent:HasIcon() then
-				--ent:Draw()
-			end
+			ent:Update()
 		end
 	end
 
@@ -191,16 +187,17 @@ if CLIENT then
 
 		local eye, forward = EyePos(), EyeAngles():Forward() 
 		local tracesDrawn = 0
-		local look_at_trace = LocalPlayer().look_at_trace
-		local look_at_ent = LocalPlayer().look_at_ent
+		local ply = LocalPlayer()
+		local look_at_trace = ply.look_at_trace
+		local look_at_ent = ply.look_at_ent
 
 		local gc0 = collectgarbage( "count" )
 		local t = SysTime()
 
 		render.OverrideColorWriteEnable(true, false)
-		render.SetMaterial( Material("metal2") )
+		render.SetMaterial( spheremat )
 		render.CullMode(MATERIAL_CULLMODE_CW)
-		render.DrawSphere( eye, cull_distance, 50, 50, Color(0,255,255,255) )
+		render.DrawSphere( eye, cull_distance, 50, 50, spherecolor )
 		render.CullMode(MATERIAL_CULLMODE_CCW)
 		render.OverrideColorWriteEnable(false, false)
 
@@ -221,16 +218,16 @@ if CLIENT then
 
 		render.ClearDepth()
 
+		if look_at_ent ~= nil then
+			look_at_ent:Draw()
+		end
+
 		if look_at_trace ~= nil then
 			local event = self.trace_to_io[look_at_trace]
 			if event ~= nil then
 				event.from:Draw()
 				event.to:Draw()
 			end
-		end
-
-		if look_at_ent ~= nil then
-			look_at_ent:Draw()
 		end
 
 		render.SetMaterial(lasermat)
@@ -243,20 +240,21 @@ if CLIENT then
 			trace_draw_blips(trace)
 		end
 
-		--_G.G_GARBAGE = collectgarbage( "count" ) - gc0
+		_G.G_GARBAGE = collectgarbage( "count" ) - gc0
+		--print("Draw[" .. _G.G_GARBAGE .. "] took " .. (SysTime() - t) * 1000 .. "ms")
 
-		LocalPlayer().look_at_trace = nil
-		LocalPlayer().look_at_ent = nil
+		ply.look_at_trace = nil
+		ply.look_at_ent = nil
 
 
 
-		if LocalPlayer():GetActiveTrace() == nil then
+		if ply:GetActiveTrace() == nil then
 
 			local hitEnt, hitPos = self.graph:VisualTrace(eye, forward, 0, 5000)
 			if hitEnt then
 
-				LocalPlayer().look_at_ent = hitEnt
-				LocalPlayer().look_at_pos = hitPos
+				ply.look_at_ent = hitEnt
+				ply.look_at_pos = hitPos
 
 			else
 
@@ -266,8 +264,8 @@ if CLIENT then
 					local along = (pos - point.pos):Dot( point.normal )
 					local v = point.pos + point.normal * along
 					--print(t)
-					LocalPlayer().look_at_trace = hitTrace
-					LocalPlayer().look_at_along = along
+					ply.look_at_trace = hitTrace
+					ply.look_at_along = along
 					render.SetMaterial(lasermat)
 					hitTrace:Draw(cull_distance, Color(200,210,255), 15, point.along + along - 30, point.along + along + 30)
 					--hitTrace:Draw( blip_color, 10, t - 30, t + 30 )
@@ -277,8 +275,6 @@ if CLIENT then
 
 			end
 		end
-
-		--print("Draw[" .. _G.G_GARBAGE .. "] took " .. (SysTime() - t) * 1000 .. "ms")
 
 	end
 
@@ -340,24 +336,11 @@ if CLIENT then
 
 	end)
 
-	hook.Add("PostDrawTranslucentRenderables", "wt_ioworld", function()
-
-		--[[if not ShouldDrawIOView() then return end
-
-		if wt_bsp.GetCurrent() == nil then return end
-		if wt_bsp.GetCurrent():IsLoading() then return end
-		if space == nil then space = wt_bsp.GetCurrent().ioworld end
-
-		space:Draw()]]
-
-	end)
-
 	hook.Add("PostDrawOpaqueRenderables", "wt_ioworld", function()
 
-		--space:Draw()
 		if not ShouldDrawIOView() then return end
 		local world = wt_bsp.GetCurrent().ioworld
-		if world then world:DrawEntities() end
+		if world then world:UpdateEntities() end
 
 	end)
 
