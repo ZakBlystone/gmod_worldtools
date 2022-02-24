@@ -14,6 +14,7 @@ function meta:Init(iograph)
 	self.trace_to_io = {}
 	self.should_draw_trace_index = {}
 	self.graph = iograph
+	self.blips = {}
 	self:BuildTraces()
 
 	return self
@@ -128,6 +129,7 @@ function meta:BuildTraces()
 			end
 
 			trace:BuildPath()
+			trace.id = id
 
 			self.traces[id] = trace
 			self.traces[id].vertical = n
@@ -141,25 +143,6 @@ function meta:BuildTraces()
 
 end
 
-function meta:AddBlipsFromIOEvent( ent, event )
-
-	local outputs = ent:GetOutputs()
-	if #outputs == 0 then return end
-
-	for _, output in ipairs(outputs) do
-
-		if output.event == event then
-
-			local trace = self.io_to_trace[output]
-			assert(trace)
-
-			trace:AddBlip( tonumber(output.delay) )
-
-		end
-
-	end
-
-end
 
 if CLIENT then
 
@@ -173,13 +156,37 @@ if CLIENT then
 	local spherecolor = Color(0,255,255,255)
 
 	local trace_draw = wt_iotrace.G_IOTRACE_META.Draw
-	local trace_draw_flashes = wt_iotrace.G_IOTRACE_META.DrawFlashes
-	local trace_draw_blips = wt_iotrace.G_IOTRACE_META.DrawBlips
+	local trace_draw_flash = wt_iotrace.G_IOTRACE_META.DrawFlash
+	local trace_draw_blip = wt_iotrace.G_IOTRACE_META.DrawBlip
 	local trace_should_draw = wt_iotrace.G_IOTRACE_META.ShouldDraw
 	local vray_result = Vector()
 	local cull_distance = 600
+	local MIN_DELAY = 0.5
+
+	function meta:UpdateBlips()
+
+		--self.blips = {}
+		local time = CurTime()
+
+		for i=#self.blips, 1, -1 do
+
+			local blip = self.blips[i]
+			local t = time - blip.time
+			if t > blip.duration + MIN_DELAY then
+
+				table.remove(self.blips, i) 
+				continue
+
+			end
+
+		end
+
+	end
 
 	function meta:UpdateEntities()
+
+		self:UpdateBlips()
+
 		local traces = self.traces
 		_G.G_EYE_POS = EyePos()
 		_G.G_EYE_X = _G.G_EYE_POS.x
@@ -194,6 +201,33 @@ if CLIENT then
 		for i=1, #traces do
 			self.should_draw_trace_index[i] = trace_should_draw(traces[i], cull_distance)
 		end
+
+	end
+
+	function meta:AddBlipsFromIOEvent( ent, event )
+
+		local outputs = ent:GetOutputs()
+		if #outputs == 0 then return end
+
+		local time = CurTime()
+
+		for _, output in ipairs(outputs) do
+
+			if output.event == event then
+
+				local trace = self.io_to_trace[output]
+				assert(trace)
+
+				self.blips[#self.blips+1] = {
+					time = time,
+					duration = tonumber(output.delay),
+					trace_id = trace.id,
+				}
+
+			end
+
+		end
+
 	end
 
 	function meta:Draw()
@@ -219,7 +253,7 @@ if CLIENT then
 
 		render.SetMaterial(lasermat)
 
-		local t = SysTime()
+		--local t = SysTime()
 
 		for i=1, num_traces do
 			if not should_draw_trace_index[i] then continue end
@@ -256,16 +290,16 @@ if CLIENT then
 		end
 
 		render.SetMaterial(lasermat)
-		for i=1, num_traces do
-			trace_draw_flashes(traces[i], cull_distance, time)
+		for _, blip in ipairs(self.blips) do
+			trace_draw_flash(traces[blip.trace_id], cull_distance, blip, time)
 		end
 
 		render.SetMaterial(flaremat)
-		for i=1, num_traces do
-			trace_draw_blips(traces[i], time)
+		for _, blip in ipairs(self.blips) do
+			trace_draw_blip(traces[blip.trace_id], blip, time)
 		end
 
-		print("Draw[" .. num_drawn .. "] took " .. (SysTime() - t) * 1000 .. "ms")
+		--print("Draw[" .. num_drawn .. "] took " .. (SysTime() - t) * 1000 .. "ms")
 
 		ply.look_at_trace = nil
 		ply.look_at_ent = nil

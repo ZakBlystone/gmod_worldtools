@@ -436,16 +436,6 @@ if CLIENT then
 		local maxDistSqr = maxDist * maxDist
 		local eye = _G.G_EYE_POS
 
-		-- this has to be fast!
-		--[[if not nocull then
-			local x,y,z = _G.G_EYE_X, _G.G_EYE_Y, _G.G_EYE_Z
-			local dx,dy,dz = (x-self.cx), (y-self.cy), (z-self.cz)
-			local dist = sqrt(dx*dx + dy*dy + dz*dz)
-			local distCheck = dist - self.radius
-			if distCheck > maxDist then return false end
-			--if true then return end
-		end]]
-
 		t0 = t0 or 0
 		t1 = t1 or self.length
 		color = color or base_trace_color
@@ -497,41 +487,36 @@ if CLIENT then
 	end
 
 	local blip_pos = Vector()
-	function meta:DrawBlips(time)
+	function meta:DrawBlip(blip, time)
 
-		local tracelen = self:GetLength()
-		local steps = 50
+		local tracelen = self.length
+		local steps = 5
 		local space = 1
 		local extratime = (space/tracelen) * steps
 
-		for i=#self.blips, 1, -1 do
+		local trace = blip.trace
+		local t = time - blip.time
 
-			local blip = self.blips[i]
-			local trace = blip.trace
-			local t = time - blip.time
+		local blip_scale = 1
+		if t > blip.duration then
 
-			local blip_scale = 1
-			if t > blip.duration then
+			local flash = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
+			blip_scale = flash
 
-				local flash = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
-				blip_scale = flash
+		end
 
-			end
+		if blip.duration > 0 then
 
-			if blip.duration > 0 then
+			local bliptime = math.min(t / blip.duration, 1 + extratime)
+			local time = bliptime * tracelen
 
-				local bliptime = math.min(t / blip.duration, 1 + extratime)
-				local time = bliptime * tracelen
+			for k=1, steps do
 
-				for k=1, steps do
-
-					local time2 = math.Clamp( time - (k * space), 0, tracelen )
-					local pos = self:GetPointAlongPath( time2, blip_pos )
-					local size = (8 - (k/steps) * 8 ) * blip_scale
-					if time2 == tracelen then size = size * 2 end
-					render.DrawSprite( pos, size, size, blip_color )
-
-				end
+				local time2 = math.Clamp( time - (k * space), 0, tracelen )
+				local pos = self:GetPointAlongPath( time2, blip_pos )
+				local size = (8 - (k/steps) * 8 ) * blip_scale
+				if time2 == tracelen then size = size * 2 end
+				render.DrawSprite( pos, size, size, blip_color )
 
 			end
 
@@ -540,33 +525,21 @@ if CLIENT then
 	end
 
 	local blip_r,blip_g,blip_b,blip_a = blip_color:Unpack()
-	function meta:DrawFlashes(maxDist, time)
+	function meta:DrawFlash(maxDist, blip, time)
 
-		for i=#self.blips, 1, -1 do
+		local t = time - blip.time
+		if t > blip.duration then
 
-			local blip = self.blips[i]
-			local t = time - blip.time
-			if t > blip.duration + MIN_DELAY then
-
-				table.remove(self.blips, i) 
-				continue
-
+			local fl = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
+			if fl > 0 then
+				lerped:SetUnpacked( blip_r*fl, blip_g*fl, blip_b*fl, blip_a*fl )
+				self:Draw( maxDist, lerped, 8, nil, nil, true )
+				self:Draw( maxDist, lerped, 16, nil, nil, true )
 			end
 
-			if t > blip.duration then
+		else
 
-				local fl = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
-				if fl > 0 then
-					lerped:SetUnpacked( blip_r*fl, blip_g*fl, blip_b*fl, blip_a*fl )
-					self:Draw( maxDist, lerped, 8, nil, nil, true )
-					self:Draw( maxDist, lerped, 16, nil, nil, true )
-				end
-
-			else
-
-				self:Draw( maxDist, blip_color, 8, 0, (t / blip.duration) * self.length, true )
-
-			end
+			self:Draw( maxDist, blip_color, 8, 0, (t / blip.duration) * self.length, true )
 
 		end
 
