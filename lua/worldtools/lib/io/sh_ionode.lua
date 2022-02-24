@@ -244,6 +244,7 @@ function meta:MakeClientEntity()
 
 		end
 		self.model = iconent
+		self.is_icon = true
 		self.localBounds = {min, max}
 
 	elseif validModel then
@@ -348,9 +349,11 @@ function meta:Update()
 
 	self.existsOnServerCached = self:ExistsOnServer()
 
-	if not self:ExistsOnServer() then return end
+	if not self.existsOnServerCached then return end
+	if self.is_icon then return end -- Icons don't move
 
-	if self.model then
+	local model = self.model
+	if model then
 
 		--if self.ent.classname == "func_movelinear" then
 		local real = self:GetEntity()
@@ -361,7 +364,7 @@ function meta:Update()
 			pos, ang = self.pos, self.angles
 		end
 
-		local parent = self:GetParent()
+		local parent = self.parent
 		if parent ~= nil then
 			local preal = parent:GetEntity()
 			if IsValid(preal) then
@@ -373,15 +376,18 @@ function meta:Update()
 
 		if self.lastPos ~= nil and self.lastPos ~= pos then
 			self:Moved()
+
+			model.RenderPos = pos
+			model:SetPos( pos )
+		end
+
+		if self.lastAng ~= nil and self.lastAng ~= ang then
+			model.RenderAngles = ang
+			model:SetAngles( ang )
 		end
 
 		self.lastPos = pos
-
-		self.model.RenderPos = pos
-		self.model.RenderAngles = ang
-
-		self.model:SetPos( pos )
-		self.model:SetAngles( ang )
+		self.lastAng = ang
 
 	end
 

@@ -490,7 +490,7 @@ if CLIENT then
 	function meta:DrawBlip(blip, time)
 
 		local tracelen = self.length
-		local steps = 5
+		local steps = 2
 		local space = 1
 		local extratime = (space/tracelen) * steps
 
@@ -510,7 +510,7 @@ if CLIENT then
 			local bliptime = math.min(t / blip.duration, 1 + extratime)
 			local time = bliptime * tracelen
 
-			for k=1, steps do
+			for k=0, steps do
 
 				local time2 = math.Clamp( time - (k * space), 0, tracelen )
 				local pos = self:GetPointAlongPath( time2, blip_pos )

@@ -185,6 +185,7 @@ if CLIENT then
 
 	function meta:UpdateEntities()
 
+
 		self:UpdateBlips()
 
 		local traces = self.traces
@@ -193,9 +194,15 @@ if CLIENT then
 		_G.G_EYE_Y = _G.G_EYE_POS.y
 		_G.G_EYE_Z = _G.G_EYE_POS.z
 
+		local t = SysTime()
+
+		local num = 0
 		for ent in self.graph:Ents() do
 			ent:Update()
+			num = num + 1
 		end
+
+		--print("Update Entities[" .. num .. "] took " .. (SysTime() - t) * 1000 .. "ms")
 
 		self.should_draw_trace_index = {}
 		for i=1, #traces do
@@ -253,7 +260,7 @@ if CLIENT then
 
 		render.SetMaterial(lasermat)
 
-		--local t = SysTime()
+		local t = SysTime()
 
 		for i=1, num_traces do
 			if not should_draw_trace_index[i] then continue end
