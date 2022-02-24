@@ -335,7 +335,11 @@ local function ConformLineToSphere( pos, radiusSqr, a, b )
 	if v < 0 then return false, a, b end
 	if v == 0 then return false, a, b end
 
-	local d = -vdot(u,vdir)
+	vmul(u, l)
+	vadd(b, a)
+
+	-- We cull this using a rendered sphere, no need to truncate the lines
+	--[[local d = -vdot(u,vdir)
 
 	local root = math.sqrt(v)
 
@@ -347,7 +351,7 @@ local function ConformLineToSphere( pos, radiusSqr, a, b )
 	vmul(a, d0)
 	vmul(b, d1)
 	vadd(a, o)
-	vadd(b, o)
+	vadd(b, o)]]
 	return true
 
 end
@@ -413,6 +417,17 @@ if CLIENT then
 	local vma = Vector()
 	local sqrt = math.sqrt
 
+	function meta:ShouldDraw(maxDist)
+
+		local x,y,z = _G.G_EYE_X, _G.G_EYE_Y, _G.G_EYE_Z
+		local dx,dy,dz = (x-self.cx), (y-self.cy), (z-self.cz)
+		local dist = sqrt(dx*dx + dy*dy + dz*dz)
+		local distCheck = dist - self.radius
+		if distCheck > maxDist then return false end
+		return true
+
+	end
+
 	function meta:Draw(maxDist, color, width, t0, t1, nocull)
 
 		--if true then return end
@@ -422,14 +437,14 @@ if CLIENT then
 		local eye = _G.G_EYE_POS
 
 		-- this has to be fast!
-		if not nocull then
+		--[[if not nocull then
 			local x,y,z = _G.G_EYE_X, _G.G_EYE_Y, _G.G_EYE_Z
 			local dx,dy,dz = (x-self.cx), (y-self.cy), (z-self.cz)
 			local dist = sqrt(dx*dx + dy*dy + dz*dz)
 			local distCheck = dist - self.radius
-			if distCheck > maxDist then return end
+			if distCheck > maxDist then return false end
 			--if true then return end
-		end
+		end]]
 
 		t0 = t0 or 0
 		t1 = t1 or self.length
@@ -477,10 +492,12 @@ if CLIENT then
 
 		end
 
+		return true
+
 	end
 
 	local blip_pos = Vector()
-	function meta:DrawBlips()
+	function meta:DrawBlips(time)
 
 		local tracelen = self:GetLength()
 		local steps = 50
@@ -491,7 +508,7 @@ if CLIENT then
 
 			local blip = self.blips[i]
 			local trace = blip.trace
-			local t = CurTime() - blip.time
+			local t = time - blip.time
 
 			local blip_scale = 1
 			if t > blip.duration then
@@ -522,12 +539,13 @@ if CLIENT then
 
 	end
 
-	function meta:DrawFlashes(maxDist)
+	local blip_r,blip_g,blip_b,blip_a = blip_color:Unpack()
+	function meta:DrawFlashes(maxDist, time)
 
 		for i=#self.blips, 1, -1 do
 
 			local blip = self.blips[i]
-			local t = CurTime() - blip.time
+			local t = time - blip.time
 			if t > blip.duration + MIN_DELAY then
 
 				table.remove(self.blips, i) 
@@ -539,8 +557,7 @@ if CLIENT then
 
 				local fl = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
 				if fl > 0 then
-					local r,g,b,a = blip_color:Unpack()
-					lerped:SetUnpacked( r*fl, g*fl, b*fl, a*fl )
+					lerped:SetUnpacked( blip_r*fl, blip_g*fl, blip_b*fl, blip_a*fl )
 					self:Draw( maxDist, lerped, 8, nil, nil, true )
 					self:Draw( maxDist, lerped, 16, nil, nil, true )
 				end

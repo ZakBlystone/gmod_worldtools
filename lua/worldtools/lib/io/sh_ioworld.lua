@@ -12,6 +12,7 @@ function meta:Init(iograph)
 	self.traces = {}
 	self.io_to_trace = {}
 	self.trace_to_io = {}
+	self.should_draw_trace_index = {}
 	self.graph = iograph
 	self:BuildTraces()
 
@@ -174,12 +175,24 @@ if CLIENT then
 	local trace_draw = wt_iotrace.G_IOTRACE_META.Draw
 	local trace_draw_flashes = wt_iotrace.G_IOTRACE_META.DrawFlashes
 	local trace_draw_blips = wt_iotrace.G_IOTRACE_META.DrawBlips
+	local trace_should_draw = wt_iotrace.G_IOTRACE_META.ShouldDraw
 	local vray_result = Vector()
 	local cull_distance = 600
 
 	function meta:UpdateEntities()
+		local traces = self.traces
+		_G.G_EYE_POS = EyePos()
+		_G.G_EYE_X = _G.G_EYE_POS.x
+		_G.G_EYE_Y = _G.G_EYE_POS.y
+		_G.G_EYE_Z = _G.G_EYE_POS.z
+
 		for ent in self.graph:Ents() do
 			ent:Update()
+		end
+
+		self.should_draw_trace_index = {}
+		for i=1, #traces do
+			self.should_draw_trace_index[i] = trace_should_draw(traces[i], cull_distance)
 		end
 	end
 
@@ -187,12 +200,15 @@ if CLIENT then
 
 		local eye, forward = EyePos(), EyeAngles():Forward() 
 		local tracesDrawn = 0
+		local time = CurTime()
 		local ply = LocalPlayer()
 		local look_at_trace = ply.look_at_trace
 		local look_at_ent = ply.look_at_ent
+		local should_draw_trace_index = self.should_draw_trace_index
+		local traces = self.traces
+		local num_traces = #traces
+		local num_drawn = 0
 
-		local gc0 = collectgarbage( "count" )
-		local t = SysTime()
 
 		render.OverrideColorWriteEnable(true, false)
 		render.SetMaterial( spheremat )
@@ -202,16 +218,25 @@ if CLIENT then
 		render.OverrideColorWriteEnable(false, false)
 
 		render.SetMaterial(lasermat)
-		for k, trace in ipairs(self.traces) do
+
+		local t = SysTime()
+
+		for i=1, num_traces do
+			if not should_draw_trace_index[i] then continue end
+
 			local col = nil
+			local trace = traces[i]
+
 			if trace == look_at_trace then col = highlighted_color end
 
 			local event = self.trace_to_io[trace]
 			if not event then col = trace_color_dead end
-			if not event.from:ExistsOnServer() then col = trace_color_dead end
-			if not event.to:ExistsOnServer() then col = trace_color_dead end
+			if not event.from.existsOnServerCached then col = trace_color_dead end
+			if not event.to.existsOnServerCached then col = trace_color_dead end
 
-			trace_draw(trace, cull_distance, col)
+			if trace_draw(trace, cull_distance, col) then
+				num_drawn = num_drawn + 1
+			end
 		end
 
 		-- Draw Entities
@@ -231,17 +256,16 @@ if CLIENT then
 		end
 
 		render.SetMaterial(lasermat)
-		for k, trace in ipairs(self.traces) do
-			trace_draw_flashes(trace, cull_distance)
+		for i=1, num_traces do
+			trace_draw_flashes(traces[i], cull_distance, time)
 		end
 
 		render.SetMaterial(flaremat)
-		for k, trace in ipairs(self.traces) do
-			trace_draw_blips(trace)
+		for i=1, num_traces do
+			trace_draw_blips(traces[i], time)
 		end
 
-		_G.G_GARBAGE = collectgarbage( "count" ) - gc0
-		--print("Draw[" .. _G.G_GARBAGE .. "] took " .. (SysTime() - t) * 1000 .. "ms")
+		print("Draw[" .. num_drawn .. "] took " .. (SysTime() - t) * 1000 .. "ms")
 
 		ply.look_at_trace = nil
 		ply.look_at_ent = nil
@@ -336,11 +360,17 @@ if CLIENT then
 
 	end)
 
-	hook.Add("PostDrawOpaqueRenderables", "wt_ioworld", function()
+	hook.Add("PreRender", "wt_ioworld", function()
 
 		if not ShouldDrawIOView() then return end
 		local world = wt_bsp.GetCurrent().ioworld
 		if world then world:UpdateEntities() end
+
+	end)
+
+	hook.Add("PostDrawOpaqueRenderables", "wt_ioworld", function()
+
+
 
 	end)
 

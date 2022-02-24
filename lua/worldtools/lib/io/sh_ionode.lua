@@ -346,6 +346,8 @@ local angleIdent = Angle(0,0,0)
 
 function meta:Update()
 
+	self.existsOnServerCached = self:ExistsOnServer()
+
 	if not self:ExistsOnServer() then return end
 
 	if self.model then
