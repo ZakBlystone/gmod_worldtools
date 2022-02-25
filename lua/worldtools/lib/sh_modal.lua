@@ -19,7 +19,9 @@ local function RecursiveConstructMenu(menu, t, depth)
 	for k, v in ipairs(t.options) do
 
 		local submenu, op = nil
-		if v.options then
+		if v.panel then
+			menu:AddPanel(v.panel)
+		elseif v.options then
 			submenu, op = menu:AddSubMenu( v.title, v.func )
 			RecursiveConstructMenu( submenu, v, depth + 1 )
 		elseif not v.title then

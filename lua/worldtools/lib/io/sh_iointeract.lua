@@ -22,9 +22,11 @@ if SERVER then
 
 			local ent = net.ReadUInt(32)
 			local event = wt_ionet.ReadIndexed()
+			local param = net.ReadString()
 			local node = graph:GetByIndex(ent)
+			if param == "" then param = nil end
 			if node ~= nil then
-				node:Fire(event, ply, ply)
+				node:Fire(event, ply, ply, 0, param)
 			end
 
 		end
@@ -44,12 +46,13 @@ elseif CLIENT then
 
 	end]]
 
-	local function SendEvent(node, event)
+	local function SendEvent(node, event, param)
 
 		net.Start("io_interact")
 		net.WriteUInt(MSG_ENTITY_FIRE_INPUT, MSG_BITS)
 		net.WriteUInt(node:GetIndex(), 32)
 		wt_ionet.WriteIndexed(event)
+		net.WriteString(param or "")
 		net.SendToServer()
 
 	end
@@ -68,10 +71,46 @@ elseif CLIENT then
 
 			input_options[#input_options+1] = { title = v.class }
 			for _,ev in ipairs(v.list) do
-				input_options[#input_options+1] = {
-					title = ev,
-					func = function() SendEvent(node, ev) end,				
-				}
+
+				local paramType = fgd.inputs[ev]
+
+				if paramType == "void" then
+					input_options[#input_options+1] = {
+						title = ev,
+						func = function() SendEvent(node, ev) end,
+					}
+				elseif paramType == "float" then
+					local panel = vgui.Create("DPanel")
+					local numeric = vgui.Create("DNumberScratch", panel)
+					panel:SetSize(60,30)
+					numeric:DockMargin(4,4,4,4)
+					numeric:Dock(FILL)
+					numeric:SetMax(1000)
+					numeric:SetMin(0)
+					input_options[#input_options+1] = {
+						title = ev,
+						func = function() SendEvent(node, ev, tostring( numeric:GetFloatValue() )) end,
+						options = {
+							{ panel = panel, },
+						}
+					}
+				elseif paramType == "integer" then
+					local panel = vgui.Create("DPanel")
+					local numeric = vgui.Create("DNumberScratch", panel)
+					panel:SetSize(60,30)
+					numeric:DockMargin(4,4,4,4)
+					numeric:Dock(FILL)
+					numeric:SetMax(1000)
+					numeric:SetMin(0)
+					numeric:SetDecimals(0)
+					input_options[#input_options+1] = {
+						title = ev,
+						func = function() SendEvent(node, ev, tostring( numeric:GetFloatValue() )) end,
+						options = {
+							{ panel = panel, },
+						}
+					}
+				end
 			end
 
 		end
@@ -86,7 +125,9 @@ elseif CLIENT then
 			},
 		}
 
-		wt_modal.Menu(t)
+		local menu = wt_modal.Menu(t)
+		menu:SetKeyboardInputEnabled(true)
+		menu:SetMouseInputEnabled(true)
 
 	end
 
