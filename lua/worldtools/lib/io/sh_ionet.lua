@@ -4,7 +4,6 @@ if SERVER then
 
 	util.AddNetworkString("io_net_event")
 	util.AddNetworkString("io_player_ride")
-	util.AddNetworkString("io_trace_interact")
 
 end
 
@@ -26,7 +25,7 @@ end
 
 local lookupStringBits = math.ceil(math.log(#strings) / LOG_2)
 
-local function WriteIndexed(str)
+function WriteIndexed(str)
 
 	local n = stringLookup[str]
 	if n then
@@ -39,7 +38,7 @@ local function WriteIndexed(str)
 
 end
 
-local function ReadIndexed()
+function ReadIndexed()
 
 	if net.ReadBit() == 1 then
 		return strings[net.ReadUInt(lookupStringBits)+1]
@@ -82,37 +81,7 @@ if SERVER then
 
 	end)
 
-	net.Receive("io_trace_interact", function(len, ply)
-
-		local mode = net.ReadUInt(1)
-		local id = net.ReadUInt(32)+1
-		local along = net.ReadFloat()
-		local ioworld = wt_bsp.GetCurrent().ioworld
-		local trace = ioworld:GetTraceByIndex(id)
-
-		print("INTERACT TRACE: " .. id)
-
-		if ioworld and ioworld.graph then
-
-			ioworld:InteractTrace(ply, mode, trace, along)
-
-		end
-
-	end)
-
 else
-
-	function PlayerInteractTrace( trace, along, mode )
-
-		local id = trace:GetIndex()
-
-		net.Start("io_trace_interact")
-		net.WriteUInt( mode, 1 )
-		net.WriteUInt( id-1, 32 )
-		net.WriteFloat( along )
-		net.SendToServer()
-
-	end
 
 	function RequestRideTrace( trace, along )
 

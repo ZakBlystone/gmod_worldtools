@@ -409,12 +409,6 @@ if CLIENT then
 
 	end)
 
-	hook.Add("PostDrawOpaqueRenderables", "wt_ioworld", function()
-
-
-
-	end)
-
 	local invert_color_mod = {
 		[ "$pp_colour_addr" ] = -1,
 		[ "$pp_colour_addg" ] = -1,
@@ -486,21 +480,30 @@ if CLIENT then
 
 	end
 
-	hook.Add( "KeyPress", "wt_interact", function( ply, key )
+	hook.Add( "KeyPress", "wt_interact_keypress", function( ply, key )
+
 		if not ShouldDrawIOView() then return end
 		if not IsFirstTimePredicted() and not game.SinglePlayer() then return end
+		if wt_iointeract.IsInMenu() then return end
+
+		local world = wt_bsp.GetCurrent().ioworld
+
 		if key == IN_ATTACK or key == IN_ATTACK2 then
-			print("Interact")
-			
-			local mode = (key == IN_ATTACK) and 0 or 1
+
+			local node = LocalPlayer().look_at_ent
+			if node ~= nil then
+				if wt_iointeract.CL_InteractNode(world, node, key, true) then return end
+			end
+
 			local trace = LocalPlayer().look_at_trace
 			if trace ~= nil then
-				wt_ionet.PlayerInteractTrace( trace, LocalPlayer().look_at_along, mode )
-				ply:EmitSound( "buttons/button3.wav" )
-			else
-				ply:EmitSound( "Weapon_Pistol.Empty" )
+				if wt_iointeract.CL_InteractTrace(world, node, key, true) then return end
 			end
+
+			ply:EmitSound( "Weapon_Pistol.Empty" )
+
 		end
+
 	end )
 	
 	hook.Add("HUDPaint", "wt_ioworld", function()

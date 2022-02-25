@@ -218,6 +218,50 @@ end]]
 
 FGDClasses = classes
 
+function GetFGDClass(class)
+
+	return FGDClasses[class]
+
+end
+
+function CategorizedIO(class, keys, out)
+
+	keys = keys or { inputs = {}, outputs = {} }
+	out = out or { inputs = {}, outputs = {} }
+
+	for _,v in ipairs(class.baseclasses) do
+		local fgd = FGDClasses[v]
+		CategorizedIO(fgd, keys, out)
+	end
+
+	local t = {}
+	for k,v in pairs(class.inputs) do
+		if keys.inputs[k] then continue end
+		keys.inputs[k] = true
+		t[#t+1] = k
+	end
+
+	if #t > 0 then
+		table.sort(t)
+		table.insert(out.inputs, 1, { class = class.classname, list = t })
+	end
+
+	local t = {}
+	for k,v in pairs(class.outputs) do
+		if keys.outputs[k] then continue end
+		keys.outputs[k] = true
+		t[#t+1] = k
+	end
+
+	if #t > 0 then
+		table.sort(t)
+		table.insert(out.outputs, 1, { class = class.classname, list = t })
+	end
+
+	return out
+
+end
+
 local proxy_name = "__wt_io_proxy"
 local function bindGraphIOToProxy( graph )
 

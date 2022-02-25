@@ -16,6 +16,7 @@ include("sh_poly.lua")
 include("sh_brush.lua")
 include("sh_phy.lua")
 include("sh_bsptypes.lua")
+include("sh_modal.lua")
 
 -- Needs to load before bsp
 include("io/sh_iocommon.lua")
@@ -26,6 +27,7 @@ include("io/sh_ionet.lua")
 include("io/sh_iotrace.lua")
 include("io/sh_iomove.lua")
 include("io/sh_ioworld.lua")
+include("io/sh_iointeract.lua")
 
 include("sh_bsp.lua")
 include("sh_bspquery.lua")

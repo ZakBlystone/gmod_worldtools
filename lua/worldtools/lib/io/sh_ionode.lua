@@ -343,6 +343,22 @@ function meta:Moved()
 	end
 end
 
+function meta:Fire(func, activator, caller, delay, param)
+
+	local real = self:GetEntity()
+	if IsValid(real) then
+		real:Fire(
+			func, 
+			param or nil, 
+			delay or 0, 
+			activator, 
+			caller)
+	else
+		print("COULDN'T FIND REAL ENTITY FOR: " .. self.to:GetName())
+	end
+
+end
+
 local angleIdent = Angle(0,0,0)
 
 function meta:Update()
@@ -374,14 +390,14 @@ function meta:Update()
 			end
 		end
 
-		if self.lastPos ~= nil and self.lastPos ~= pos then
+		if self.lastPos ~= pos then
 			self:Moved()
 
 			model.RenderPos = pos
 			model:SetPos( pos )
 		end
 
-		if self.lastAng ~= nil and self.lastAng ~= ang then
+		if self.lastAng ~= ang then
 			model.RenderAngles = ang
 			model:SetAngles( ang )
 		end
