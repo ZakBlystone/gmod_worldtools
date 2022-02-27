@@ -216,6 +216,12 @@ function meta:GetMatrix(mtx)
 
 	mtx = mtx or Matrix()
 
+	if self.is_icon then
+		mtx:SetTranslation(self.pos)
+		mtx:SetAngles(self.angles)
+		return mtx
+	end
+
 	local ent = self:GetEntity()
 	if IsValid(ent) then
 		mtx:SetTranslation(ent:GetPos())
@@ -272,7 +278,7 @@ function meta:Fire(func, activator, caller, delay, param)
 			activator, 
 			caller)
 	else
-		print("COULDN'T FIND REAL ENTITY FOR: " .. self.to:GetName())
+		print("COULDN'T FIND REAL ENTITY FOR: " .. self:GetName())
 	end
 
 end

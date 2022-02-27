@@ -476,6 +476,11 @@ if CLIENT then
 				local tex = v.editorkeys.iconsprite:sub(1,-5)
 				point_textures[v.classname] = tex
 				point_materials[v.classname] = Material(tex)
+				--print(tex)
+			else
+				local tex = "editor/info_target"
+				point_textures[v.classname] = tex
+				point_materials[v.classname] = Material(tex)
 			end
 		end
 	end
