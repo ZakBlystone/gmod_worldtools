@@ -263,47 +263,6 @@ function CategorizedIO(class, keys, out)
 end
 
 local proxy_name = "__wt_io_proxy"
-local function bindGraphIOToProxy( graph )
-
-	local io_proxy = ents.FindByClass("wt_io_proxy")[1]
-	if not IsValid( io_proxy ) then
-		io_proxy = ents.Create("wt_io_proxy")
-		io_proxy:SetPos( Vector(0,0,0) )
-		io_proxy:SetName(proxy_name)
-		io_proxy:Spawn()
-	end
-
-	for ent in graph:Nodes() do
-
-		local sv_ent = ent:GetEntity()
-
-		if IsValid(sv_ent) then
-
-			local bound = {}
-			for _, output in ent:Outputs() do
-
-				if not bound[output.event] then
-
-					bound[output.event] = true
-
-					local outputStr = string.format(
-						"%s %s,wt_io_forward,%s_%d,0,-1", 
-						output.event,
-						proxy_name,
-						output.event,
-						ent:GetIndex())
-
-					sv_ent:Fire("AddOutput", outputStr)
-
-				end
-
-			end
-
-		end
-
-	end
-
-end
 
 if SERVER then
 
@@ -356,8 +315,6 @@ if SERVER then
 		end
 
 		assert(wt_bsp.GetCurrent() ~= nil)
-
-		bindGraphIOToProxy( wt_bsp.GetCurrent().iograph )
 
 		for _, ent in ipairs(ents.GetAll()) do
 			BindEntityToSink(ent, ent:GetClass())

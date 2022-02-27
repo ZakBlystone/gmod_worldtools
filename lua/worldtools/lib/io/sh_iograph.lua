@@ -25,10 +25,55 @@ an edge:
 
 local eventDataMeta = G_EVENTDATA_META
 eventDataMeta.__index = eventDataMeta
+eventDataMeta.__tostring = function(self)
+
+	return ("%s:%s -> %s.%s(%s) @%0.2fs [%i]"):format(
+		self.from:GetName(),
+		self.event,
+		self.to:GetName(),
+		self.func,
+		tostring(self.param),
+		self.delay or 0,
+		self.refire or -1
+	)
+
+end
+
+function eventDataMeta:ComputeHash()
+
+	self.hash = util.SHA1( ("%i|%i:%s.%s(%s)%f_%i"):format(
+		self.from:GetIndex(),
+		self.to:GetIndex(),
+		self.event,
+		self.func,
+		tostring(self.param),
+		self.delay or 0,
+		self.refire or -1
+	) )
+
+	self.rawhash = self.hash:gsub("%w%w", function(x)
+		return string.char(tonumber(x[1],16) * 16 + tonumber(x[2],16))
+	end)
+
+end
+
+function eventDataMeta:GetHash()
+
+	return self.hash
+
+end
+
+function eventDataMeta:GetRawHash()
+
+	return self.rawhash
+
+end
 
 function eventDataMeta:Fire(activator, caller, delay, param)
 
 	local from_ent = self.from:GetEntity()
+
+	wt_ionet.AddPendingEvent(self)
 
 	self.to:Fire(
 		self.func, 
@@ -98,6 +143,8 @@ function meta:Link()
 
 	wt_task.Yield("sub", "linking graph")
 
+	local hashes = {}
+
 	for node in self:Nodes() do
 
 		local name = node:GetName()
@@ -116,6 +163,17 @@ function meta:Link()
 				}
 
 				setmetatable(eventData, eventDataMeta)
+				eventData:ComputeHash()
+
+				local hash = eventData:GetHash()
+
+				if hashes[hash] then
+					print("DUPLICATE IO: " .. tostring(eventData))
+					continue
+				end
+				
+				hashes[hash] = true
+
 				self.edges[#self.edges+1] = eventData
 
 				wt_task.YieldPer(10, "progress", 1)
@@ -145,6 +203,16 @@ function meta:HandleOutput( caller, activator, event, data )
 
 		ent:FireOutput( event, activator, caller )
 
+	end
+
+end
+
+function meta:FindEdgeByHash( hash )
+
+	local i = 1
+	for edge in self:Edges() do
+		if edge:GetRawHash() == hash then return edge end
+		if edge:GetHash() == hash then return edge end
 	end
 
 end

@@ -7,6 +7,8 @@ local inMenu = false
 function IsInMenu() return inMenu end
 
 MSG_ENTITY_FIRE_INPUT = 0
+MSG_ENTITY_FIRE_OUTPUT = 1
+MSG_ENTITY_FIRE_OUTPUT_SPECIFIC = 2
 MSG_BITS = 2
 
 if SERVER then
@@ -29,6 +31,21 @@ if SERVER then
 				node:Fire(event, ply, ply, 0, param)
 			end
 
+		elseif cmd == MSG_ENTITY_FIRE_OUTPUT then
+
+			local ent = net.ReadUInt(32)
+			local event = wt_ionet.ReadIndexed()
+			local node = graph:GetByIndex(ent)
+			if node ~= nil then
+				node:FireOutput(event, ply, node:GetEntity() or ply)
+			end
+
+		elseif cmd == MSG_ENTITY_FIRE_OUTPUT_SPECIFIC then
+
+			local hash = net.ReadData(20)
+			local edge = graph:FindEdgeByHash(hash)
+			edge:Fire()
+
 		end
 
 	end)
@@ -46,7 +63,7 @@ elseif CLIENT then
 
 	end]]
 
-	local function SendEvent(node, event, param)
+	local function SendInputEvent(node, event, param)
 
 		net.Start("io_interact")
 		net.WriteUInt(MSG_ENTITY_FIRE_INPUT, MSG_BITS)
@@ -57,6 +74,24 @@ elseif CLIENT then
 
 	end
 
+	local function SendOutputEvent(node, event)
+
+		net.Start("io_interact")
+		net.WriteUInt(MSG_ENTITY_FIRE_OUTPUT, MSG_BITS)
+		net.WriteUInt(node:GetIndex(), 32)
+		wt_ionet.WriteIndexed(event)
+		net.SendToServer()
+
+	end
+
+	local function SendSpecificOutput(output)
+
+		net.Start("io_interact")
+		net.WriteUInt(MSG_ENTITY_FIRE_OUTPUT_SPECIFIC, MSG_BITS)
+		net.WriteData(output:GetRawHash(), 20)
+		net.SendToServer()
+
+	end
 
 	local function OpenNodeMenu(node)
 
@@ -64,10 +99,10 @@ elseif CLIENT then
 		if fgd == nil then return end
 
 		local input_options = {}
+		local output_options = {}
 		local io_table = wt_iocommon.CategorizedIO(fgd)
 
 		for k,v in ipairs(io_table.inputs) do
-			local cat = { title = v.class, options = {} }
 
 			input_options[#input_options+1] = { title = v.class }
 			for _,ev in ipairs(v.list) do
@@ -77,7 +112,7 @@ elseif CLIENT then
 				if paramType == "void" then
 					input_options[#input_options+1] = {
 						title = ev,
-						func = function() SendEvent(node, ev) end,
+						func = function() SendInputEvent(node, ev) end,
 					}
 				elseif paramType == "float" then
 					local panel = vgui.Create("DPanel")
@@ -89,7 +124,7 @@ elseif CLIENT then
 					numeric:SetMin(0)
 					input_options[#input_options+1] = {
 						title = ev,
-						func = function() SendEvent(node, ev, tostring( numeric:GetFloatValue() )) end,
+						func = function() SendInputEvent(node, ev, tostring( numeric:GetFloatValue() )) end,
 						options = {
 							{ panel = panel, },
 						}
@@ -105,12 +140,47 @@ elseif CLIENT then
 					numeric:SetDecimals(0)
 					input_options[#input_options+1] = {
 						title = ev,
-						func = function() SendEvent(node, ev, tostring( numeric:GetFloatValue() )) end,
+						func = function() SendInputEvent(node, ev, tostring( numeric:GetFloatValue() )) end,
 						options = {
 							{ panel = panel, },
 						}
 					}
 				end
+			end
+
+		end
+
+		for k,v in ipairs(io_table.outputs) do
+
+			output_options[#output_options+1] = { title = v.class }
+			for _,ev in ipairs(v.list) do
+
+				local entry = { 
+					title = ev,
+					func = function() SendOutputEvent(node, ev) end,
+				}
+
+				local targets = {}
+				for _, v in node:Outputs() do
+
+					if v.event == ev then
+
+						targets[#targets+1] = {
+							title = v.to:GetName() .. "(" .. v.to:GetIndex() .. ")." .. v.func .. "(" .. tostring(v.param) .. ") @" .. (v.delay or 0) .. "s",
+							func = function() SendSpecificOutput(v) end,
+						}
+
+					end
+
+				end
+
+				if #targets > 0 then
+					entry.options = targets
+					entry.width = 300
+				end
+
+				output_options[#output_options+1] = entry
+
 			end
 
 		end
@@ -121,7 +191,8 @@ elseif CLIENT then
 			width = 200,
 			options = {
 				{ title = node:GetName() .. "<" .. node:GetClass() .. ">", },
-				{ title = "Inputs", icon = "icon16/lightning_go.png", options = input_options }
+				{ title = "Inputs", icon = "icon16/lightning_go.png", options = input_options },
+				{ title = "Outputs", icon = "icon16/lorry_go.png", options = output_options }
 			},
 		}
 

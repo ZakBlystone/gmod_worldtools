@@ -23,6 +23,7 @@ local function RecursiveConstructMenu(menu, t, depth)
 			menu:AddPanel(v.panel)
 		elseif v.options then
 			submenu, op = menu:AddSubMenu( v.title, v.func )
+			if v.width then submenu:SetMinimumWidth(v.width) end
 			RecursiveConstructMenu( submenu, v, depth + 1 )
 		elseif not v.title then
 			menu:AddSpacer()

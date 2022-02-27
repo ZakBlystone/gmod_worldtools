@@ -53,19 +53,74 @@ print("Lookup bits: " .. lookupStringBits)
 
 if SERVER then
 
-	function SendEventToClients( ent, event )
+	local event_packs = {}
+	local max_events_in_pack = 100
+	local max_pack_duration = 0.5
+	local next_pack_time = 0
 
-		net.Start("io_net_event")
-		net.WriteUInt( ent:GetIndex()-1, 16 )
-		WriteIndexed( event )
-		net.Broadcast()
+	function AddPendingEvent( output )
+
+		local time = CurTime()
+
+		local pack = nil
+		for _,v in ipairs(event_packs) do
+			if time - v.time < max_pack_duration then
+				pack = v
+				break
+			end
+		end
+
+		local split = pack and #pack.events > max_events_in_pack
+		if pack == nil or split then
+			if split then print("SPLITTING EVENT PACK") end
+			pack = { time = time, last = time, events = {} }
+			event_packs[#event_packs+1] = pack
+		end
+
+		if math.abs(time - pack.last) > 0.01 then
+			pack.events[#pack.events+1] = { delta = time - pack.last }
+			pack.last = time
+		end
+
+		pack.events[#pack.events+1] = { output = output }
 
 	end
 
-	hook.Add("IOEventTriggered", "wt_ionet", function(ent, event)
+	hook.Add("Tick", "wt_ionet_eventpack_tick", function()
 
-		--print( ent:GetName() .. " -> " .. event )
-		SendEventToClients( ent, event )
+		--print("PENDING: " .. #event_packs)
+		if next_pack_time > CurTime() then return end
+		next_pack_time = CurTime() + 0.1
+
+		if #event_packs == 0 then return end
+		local pack = event_packs[1]
+		table.remove(event_packs, 1)
+
+		print("SEND EVENT PACK")
+		print(" - @" .. pack.time .. " : " .. #pack.events .. " event(s)")
+		for i=1, #pack.events do
+			local ev = pack.events[i]
+			if ev.output then
+				print(" - " .. tostring(ev.output))
+			elseif ev.delta then
+				print(" + " .. ev.delta)
+			end
+		end
+
+		net.Start("io_net_event")
+		net.WriteFloat( pack.time )
+		net.WriteUInt( #pack.events, 8 )
+		for i=1, #pack.events do
+			local ev = pack.events[i]
+			if ev.output then
+				net.WriteBit(false)
+				net.WriteData(ev.output:GetRawHash(), 20)
+			elseif ev.delta then
+				net.WriteBit(true)
+				net.WriteFloat(ev.delta)
+			end
+		end
+		net.Broadcast()
 
 	end)
 
@@ -96,34 +151,26 @@ else
 
 	net.Receive("io_net_event", function(len, ply)
 
-		local id = net.ReadUInt(16)
-		local event = ReadIndexed()
 		local data = wt_bsp.GetCurrent()
-
 		if data == nil or data:IsLoading() then return end
+		local graph = data.iograph
+		local world = data.ioworld
 
-		local ent = data.iograph:GetByIndex(id+1)
-
-		hook.Call("IOEventTriggered", GAMEMODE, ent, event )
-
-
-	end)
-
-	hook.Add("IOEventTriggered", "wt_ionet", function(ent, event)
-
-		--[[for _, out in ent:Outputs() do
-
-			if out.event == event then
-
-				timer.Simple( out.delay, function()
-
-					print( out.from:GetName() .. "[" .. out.event .. "]" .. " -> " .. out.to:GetName() .. "[" .. out.func .. "]" )
-
-				end )
-
+		local time = net.ReadFloat()
+		local num = net.ReadUInt(8)
+		for i=1, num do
+			if net.ReadBit() == 0 then
+				local hash = net.ReadData(20)
+				local edge = graph:FindEdgeByHash(hash)
+				if edge ~= nil then
+					print("TIME: +" .. (time - CurTime()))
+					world:AddBlipFromEdge(edge, time)
+				end
+			else
+				time = time + net.ReadFloat()
 			end
+		end
 
-		end]]
 
 	end)
 

@@ -207,26 +207,18 @@ if CLIENT then
 
 	end
 
-	function meta:AddBlipsFromIOEvent( ent, event )
+	function meta:AddBlipFromEdge( edge, time )
 
-		local time = CurTime()
+		time = time or CurTime()
 
-		for _, output in ent:Outputs() do
+		local trace = self.io_to_trace[edge]
+		assert(trace)
 
-			if output.event == event then
-
-				local trace = self.io_to_trace[output]
-				assert(trace)
-
-				self.blips[#self.blips+1] = {
-					time = time,
-					duration = tonumber(output.delay),
-					trace_id = trace.id,
-				}
-
-			end
-
-		end
+		self.blips[#self.blips+1] = {
+			time = time,
+			duration = tonumber(edge.delay),
+			trace_id = trace.id,
+		}
 
 	end
 
@@ -387,12 +379,12 @@ if CLIENT then
 		["$additive"] = 0,
 	})
 
-	hook.Add("IOEventTriggered", "wt_ioworld", function(ent, event)
+	--[[hook.Add("IOEventTriggered", "wt_ioworld", function(ent, event)
 
 		local world = wt_bsp.GetCurrent().ioworld
 		if world then world:AddBlipsFromIOEvent( ent, event ) end
 
-	end)
+	end)]]
 
 	hook.Add("PreRender", "wt_ioworld", function()
 
