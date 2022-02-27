@@ -216,7 +216,7 @@ if CLIENT then
 
 		self.blips[#self.blips+1] = {
 			time = time,
-			duration = tonumber(edge.delay),
+			duration = tonumber(edge:GetDelay()),
 			trace_id = trace.id,
 		}
 
@@ -447,7 +447,7 @@ if CLIENT then
 			:HAlignTo(from, "left")
 			:VAlignTo(from, "after")
 
-			local delay = wt_textfx.Builder("@" .. tostring(output.delay or 0) .. "s", "WTStatusFontSmall")
+			local delay = wt_textfx.Builder("@" .. tostring(output:GetDelay()) .. "s", "WTStatusFontSmall")
 			:Box()
 			:HAlignTo(to, "left")
 			:VAlignTo(to, "after")

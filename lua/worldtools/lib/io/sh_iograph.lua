@@ -57,6 +57,8 @@ function eventDataMeta:ComputeHash()
 
 end
 
+function eventDataMeta:GetDelay() return (self.delay or 0) end
+
 function eventDataMeta:GetHash()
 
 	return self.hash
@@ -79,7 +81,7 @@ function eventDataMeta:Fire(activator, caller, delay, param)
 		self.func, 
 		activator or from_ent,
 		caller or from_ent,
-		delay or self.delay,
+		delay or self:GetDelay(),
 		param or self.param)
 
 end
