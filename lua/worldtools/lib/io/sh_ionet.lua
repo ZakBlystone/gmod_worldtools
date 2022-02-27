@@ -123,12 +123,11 @@ if SERVER then
 		local pack = event_packs[1]
 		table.remove(event_packs, 1)
 
-		print("SEND EVENT PACK")
-		print(" - @" .. pack.time .. " : " .. #pack.events .. " event(s)")
+		print("SEND EVENT PACK @" .. pack.time .. " : " .. #pack.events .. " event(s)")
 		for i=1, #pack.events do
 			local ev = pack.events[i]
 			if ev.output then
-				print(" - " .. tostring(ev.output))
+				--print(" - " .. tostring(ev.output))
 			elseif ev.delta then
 				--print(" + " .. ev.delta)
 			end

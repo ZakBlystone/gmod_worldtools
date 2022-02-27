@@ -158,15 +158,15 @@ end
 function meta:Tick( frame_time )
 
 	if SERVER then
-		local freeze = false
+
 		for _,v in ipairs(player.GetAll()) do
 			local w = v:GetActiveWeapon()
-			if w and w:GetClass() == "weapon_iotool" then
-				if v:KeyDown(IN_RELOAD) then freeze = true break end
+			if IsValid(w) and w:GetClass() == "weapon_iotool" then
+				if v:KeyPressed(IN_RELOAD) then self.freeze = not self.freeze break end
 			end
 		end
 
-		self:SetTimeScale( freeze and 0 or wt_iocommon.wt_timescale:GetFloat() )
+		self:SetTimeScale( self.freeze and 0 or wt_iocommon.wt_timescale:GetFloat() )
 	end
 
 	self.io_time = self.io_time + frame_time * self.io_time_scale
@@ -632,6 +632,10 @@ if CLIENT then
 		local ent = LocalPlayer().look_at_ent
 		if ent ~= nil then
 			DrawEntInfo(ent, world)
+		end
+
+		if world.io_time_scale == 0 then
+			draw.SimpleText("--- IO PAUSED ---", "DermaLarge", ScrW()/2, ScrH()-20, Color(255,40,40), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
 		end
 
 	end)
