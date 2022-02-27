@@ -4,38 +4,8 @@ module( "wt_ionode", package.seeall )
 
 G_IONODE_META = G_IONODE_META or {}
 
-local toolTextures = {}
 local meta = G_IONODE_META
 meta.__index = meta
-
-if CLIENT then
-
-	local function getToolTexture(texture)
-		return CreateMaterial("io_brush_tooltex_" .. texture, "UnlitGeneric", {
-			["$basetexture"] = "tools/tools" .. texture,
-			["$vertexcolor"] = 1,
-			["$vertexalpha"] = 1,
-			["$model"] = 1,
-			["$additive"] = 1,
-			["$nocull"] = 0,
-			["$alpha"] = 0.5
-		})
-	end
-
-	toolTextures = {
-		["trigger_*"] = getToolTexture("trigger"),
-		["func_button"] = getToolTexture("hint"),
-		["func_button_timed"] = getToolTexture("hint"),
-		["func_door"] = getToolTexture("origin"),
-		["func_movelinear"] = getToolTexture("playerclip"),
-		["func_rotating"] = getToolTexture("playerclip"),
-		["func_platrot"] = getToolTexture("playerclip"),
-		["func_door_rotating"] = getToolTexture("playerclip"),
-		["func_brush"] = getToolTexture("clip"),
-		["func_monitor"] = getToolTexture("skip"),
-	}
-
-end
 
 local function getBrushes(bspNode)
 
@@ -89,57 +59,6 @@ local function createBrushMesh(material, brushes)
 
 end
 
-local function lookupBrushMaterial(classname)
-
-	if true then
-
-		return wt_iocommon.GetToolMaterial(classname)
-
-	end
-
-	for k, v in pairs(toolTextures) do
-		if string.find(classname, k) then return v end
-	end
-
-	return toolTextures["trigger_*"]
-
-end
-
-local function parseOutput( str, event )
-
-	if type( str ) ~= "string" then return end
-
-	local args = { event }
-	for w in string.gmatch(str .. ",","(.-),") do
-		table.insert( args, w )
-	end
-
-	if args[2] == "" then return nil end
-
-	return args
-end
-
-function GetOutputTableForEntity( ent )
-
-	local outputs = {}
-	for _,v in ipairs(ent.outputs or {}) do
-		local output = {}
-		local parsed = parseOutput( v[2], v[1] )
-		if parsed then
-			output.event = parsed[1]  -- the event that causes this output (On*)
-			output.target = parsed[2] -- the target to affect
-			output.func = parsed[3]  -- the input to call on the target
-			output.param = parsed[4]  -- parameter passed to target
-			output.delay = parsed[5]  -- how long to wait
-			output.refire = parsed[6] -- max times to refire
-			outputs[#outputs+1] = output
-		end
-	end
-
-	return outputs
-
-end
-
 function meta:Init( ent, graph )
 
 	self.ent = ent
@@ -149,8 +68,6 @@ function meta:Init( ent, graph )
 	self.angles = ent.angles or Angle(0,0,0)
 	self.index = ent.index
 	self.parentname = ent.parentname
-	self.outputs = {}
-	self.inputs = {}
 	self.onMoved = {}
 	self.graph = graph
 	self.lastRenderTime = 0
@@ -168,7 +85,7 @@ function meta:MakeClientEntity()
 
 	local ent = self.ent
 	local validModel = ent.model and string.len(ent.model) > 0 and ent.model[1] == "*"
-	local brushMaterial = validModel and lookupBrushMaterial(ent.classname)
+	local brushMaterial = validModel and wt_iocommon.GetToolMaterial(ent.classname)
 	if brushMaterial and validModel then
 
 		local modelent = wt_csent.ManagedCSEnt("ionode_" .. self.index, ent.model)
@@ -328,8 +245,9 @@ end
 function meta:GetIndex() return self.index end
 function meta:GetName() return self.name or "<" .. self:GetClass() .. "[" .. self.index .. "]>" end
 function meta:GetClass() return self.classname or "__unknown__" end
-function meta:GetOutputs() return self.outputs end
-function meta:GetInputs() return self.inputs end
+function meta:Outputs() return self.graph:NodeOutputs(self) end
+function meta:Inputs() return self.graph:NodeInputs(self) end
+function meta:GetRawOutputs() return self.ent.outputs or {} end
 function meta:GetEntity() return ents.GetMapCreatedEntity(self.index+1234) end
 function meta:ExistsOnServer() return ents.ExistsOnServer(self.index+1234) end
 function meta:GetParent() return self.parent end
@@ -355,6 +273,20 @@ function meta:Fire(func, activator, caller, delay, param)
 			caller)
 	else
 		print("COULDN'T FIND REAL ENTITY FOR: " .. self.to:GetName())
+	end
+
+end
+
+function meta:FireOutput( event, activator, caller )
+
+	for _,v in self:Outputs() do
+
+		if v.event == event then
+
+			v:Fire(activator, caller)
+
+		end
+
 	end
 
 end
@@ -417,24 +349,11 @@ end
 
 function meta:Draw()
 
-
 	if self.model then
 
 		self.model:RenderOverride()
 
 	end
-
-	--[[local icon = wt_iocommon.GetEntityIconMaterial( self.classname )
-	if icon ~= nil then
-
-		render.SetMaterial(icon)
-		render.DrawSprite(self:GetPos(), 8, 8)
-
-	end]]
-
-	--debugoverlay.Text( self.pos, self.classname .. ": " .. self.index, 0.01, false )
-
-	--gfx.renderBox( self:GetPos(), Vector(-2,-2,-2), Vector(2,2,2), Color(100,100,100) )
 
 end
 
@@ -448,20 +367,8 @@ function meta:MatchesName( name )
 
 end
 
-function meta:GetMapEntityRecord()
+function New(ent, graph)
 
-	return self.ent
-
-end
-
-function meta:GetMapEntityOutputs()
-
-	return GetOutputTableForEntity( self:GetMapEntityRecord() )
-
-end
-
-function New(ent, indexTable)
-
-	return setmetatable({}, meta):Init(ent, indexTable)
+	return setmetatable({}, meta):Init(ent, graph)
 
 end

@@ -100,14 +100,10 @@ end
 
 function meta:BuildTraces()
 
-	for ent in self.graph:Ents() do
-
-		local inputs = ent:GetInputs()
-		local outputs = ent:GetOutputs()
-		if #outputs == 0 and #inputs == 0 then continue end
+	for ent in self.graph:Nodes() do
 
 		local n = 0
-		for _, output in ipairs(outputs) do
+		for k, output in ent:Outputs() do
 
 			local id = #self.traces+1
 			local startPos = ent:GetPos() + Vector(0,0,n)
@@ -197,7 +193,7 @@ if CLIENT then
 		local t = SysTime()
 
 		local num = 0
-		for ent in self.graph:Ents() do
+		for ent in self.graph:Nodes() do
 			ent:Update()
 			num = num + 1
 		end
@@ -213,12 +209,9 @@ if CLIENT then
 
 	function meta:AddBlipsFromIOEvent( ent, event )
 
-		local outputs = ent:GetOutputs()
-		if #outputs == 0 then return end
-
 		local time = CurTime()
 
-		for _, output in ipairs(outputs) do
+		for _, output in ent:Outputs() do
 
 			if output.event == event then
 

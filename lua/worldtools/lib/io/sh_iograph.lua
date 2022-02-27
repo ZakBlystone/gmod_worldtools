@@ -7,40 +7,35 @@ G_EVENTDATA_META = G_EVENTDATA_META or {}
 
 --[[
 
-graph is made of nodes, each node is an entity.
+a directed graph representing entities and their IO connections.
+
+each node in the graph is an entity.
+each edge is an IO connection between two nodes.
 
 a node contains:
 - an index which corresponds to the entity in the map.
 - the position of the entity
 - the name of the entity
-- inputs and outputs
 
-each input:
-- points to the originator of the event
+an edge:
+- points to the originator and target of the event
 - contains the parameters
-
-each output:
-- points to target of the event
-- contains parameters
 
 ]]
 
 local eventDataMeta = G_EVENTDATA_META
 eventDataMeta.__index = eventDataMeta
 
-function eventDataMeta:Fire(activator, caller, delay)
+function eventDataMeta:Fire(activator, caller, delay, param)
 
-	local real = self.to:GetEntity()
-	if IsValid(real) then
-		real:Fire(
-			self.func, 
-			self.param, 
-			delay or self.delay, 
-			activator or self.from:GetEntity(), 
-			caller or self.from:GetEntity())
-	else
-		print("COULDN'T FIND REAL ENTITY FOR: " .. self.to:GetName())
-	end
+	local from_ent = self.from:GetEntity()
+
+	self.to:Fire(
+		self.func, 
+		activator or from_ent,
+		caller or from_ent,
+		delay or self.delay,
+		param or self.param)
 
 end
 
@@ -52,6 +47,7 @@ function meta:Init( mapData )
 	self.ents = mapData.entities
 	self.entsByID = {}
 	self.nodes = {}
+	self.edges = {}
 
 	wt_task.Yield("sub", "creating io nodes")
 
@@ -68,20 +64,49 @@ function meta:Init( mapData )
 
 end
 
+function meta:NodeOutputs( node )
+
+	local i = 1
+	return function()
+		local n = self.edges[i]
+		while n and n.from ~= node do 
+			i = i + 1
+			n = self.edges[i]
+		end
+		i = i + 1
+		if n ~= nil then return i, n end
+	end
+
+end
+
+function meta:NodeInputs( node )
+
+	local i = 1
+	return function()
+		local n = self.edges[i]
+		while n and n.to ~= node do 
+			i = i + 1
+			n = self.edges[i]
+		end
+		i = i + 1
+		if n ~= nil then return i, n end
+	end
+
+end
+
 function meta:Link()
 
 	wt_task.Yield("sub", "linking graph")
 
-	for ent in self:Ents() do
+	for node in self:Nodes() do
 
-		local name = ent:GetName()
-		local rawOutputs = ent:GetMapEntityOutputs()
-		for _, output in ipairs(rawOutputs) do
+		local name = node:GetName()
+		for _, output in ipairs(node:GetRawOutputs()) do
 
-			for target in self:EntsByName(output.target) do
+			for target in self:NodesByName(output.target) do
 
 				local eventData = {
-					from = ent,
+					from = node,
 					to = target,
 					event = output.event,
 					func = output.func,
@@ -91,9 +116,7 @@ function meta:Link()
 				}
 
 				setmetatable(eventData, eventDataMeta)
-
-				ent.outputs[#ent.outputs+1] = eventData
-				target.inputs[#target.inputs+1] = eventData
+				self.edges[#self.edges+1] = eventData
 
 				wt_task.YieldPer(10, "progress", 1)
 
@@ -101,10 +124,10 @@ function meta:Link()
 
 		end
 
-		if ent.parentname then
+		if node.parentname then
 
-			for target in self:EntsByName(ent.parentname) do
-				ent.parent = target
+			for target in self:NodesByName(node.parentname) do
+				node.parent = target
 				break
 			end
 
@@ -114,26 +137,13 @@ function meta:Link()
 
 end
 
-function meta:FireOutput( ent, event, activator, caller )
-
-	for _,v in ipairs(ent.outputs) do
-
-		if v.event == event then
-
-			v:Fire(activator, caller)
-
-		end
-
-	end
-
-end
-
+-- Handle a sunk output from the engine
 function meta:HandleOutput( caller, activator, event, data )
 
 	local ent = self:GetByEntity(caller)
 	if ent ~= nil then
 
-		self:FireOutput( ent, event, activator, caller )
+		ent:FireOutput( event, activator, caller )
 
 	end
 
@@ -152,7 +162,18 @@ function meta:GetByEntity( ent )
 
 end
 
-function meta:Ents()
+function meta:Edges()
+
+	local i = 1
+	return function()
+		local n = self.edges[i]
+		i = i + 1
+		return n
+	end
+
+end
+
+function meta:Nodes()
 
 	local i = 1
 	return function()
@@ -179,7 +200,7 @@ function meta:RecentlyRendered()
 
 end
 
-function meta:EntsByClass( classname )
+function meta:NodesByClass( classname )
 
 	local i = 1
 	return function()
@@ -194,7 +215,7 @@ function meta:EntsByClass( classname )
 
 end
 
-function meta:EntsByName( name )
+function meta:NodesByName( name )
 
 	local i = 1
 	return function()

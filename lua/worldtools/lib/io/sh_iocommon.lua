@@ -273,14 +273,14 @@ local function bindGraphIOToProxy( graph )
 		io_proxy:Spawn()
 	end
 
-	for ent in graph:Ents() do
+	for ent in graph:Nodes() do
 
 		local sv_ent = ent:GetEntity()
 
 		if IsValid(sv_ent) then
 
 			local bound = {}
-			for _, output in ipairs(ent:GetOutputs()) do
+			for _, output in ent:Outputs() do
 
 				if not bound[output.event] then
 

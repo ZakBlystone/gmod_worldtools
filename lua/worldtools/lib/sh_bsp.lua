@@ -236,7 +236,31 @@ end )
 AddProcess( "Converting Entities", function( data )
 	if not data[LUMP_ENTITIES] then print("NO ENTITIES TO LOAD") return end
 
+	local function ProcessOutput( event, str )
+
+		if str == nil then return end
+
+		local args = { event }
+		for w in string.gmatch(str .. ",","(.-),") do
+			args[#args+1] = w
+		end
+
+		if args[2] == "" then return end
+
+		local output = {}
+		output.event = args[1]  -- the event that causes this output (On*)
+		output.target = args[2] -- the target to affect
+		output.func = args[3]  -- the input to call on the target
+		output.param = args[4]  -- parameter passed to target
+		output.delay = args[5]  -- how long to wait
+		output.refire = args[6] -- max times to refire
+
+		return output
+
+	end
+
 	local function ProcessKeyValue(t, k, v)
+
 		if k == "origin" then
 			local x,y,z = string.match( tostring(v), "([%+%-]?%d*%.?%d+) ([%+%-]?%d*%.?%d+) ([%+%-]?%d*%.?%d+)" )
 			if x and y and z then
@@ -264,10 +288,13 @@ AddProcess( "Converting Entities", function( data )
 		end
 		if string.Left( k, 2 ) == "On" then
 			t.outputs = t.outputs or {}
-			table.insert( t.outputs, {k, v} )
+
+			local parsed = ProcessOutput(k, v)
+			if parsed then t.outputs[#t.outputs+1] = parsed end
 			return nil
 		end
 		return v
+
 	end
 
 	local out = {}
@@ -603,6 +630,11 @@ Init()
 
 if CLIENT then
 	concommand.Add("wt_reloadbsp", function()
+		WT_LOADED_BSP = nil
+		Init()
+	end)
+else
+	concommand.Add("wt_sv_reloadbsp", function()
 		WT_LOADED_BSP = nil
 		Init()
 	end)

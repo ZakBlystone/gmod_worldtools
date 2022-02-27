@@ -111,7 +111,7 @@ else
 
 	hook.Add("IOEventTriggered", "wt_ionet", function(ent, event)
 
-		--[[for _, out in ipairs(ent:GetOutputs()) do
+		--[[for _, out in ent:Outputs() do
 
 			if out.event == event then
 
