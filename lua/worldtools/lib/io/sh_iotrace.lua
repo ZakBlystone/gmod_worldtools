@@ -487,7 +487,7 @@ if CLIENT then
 	end
 
 	local blip_pos = Vector()
-	function meta:DrawBlip(blip, time)
+	function meta:DrawBlip(blip, time, time_scale)
 
 		local tracelen = self.length
 		local steps = 2
@@ -500,7 +500,7 @@ if CLIENT then
 		local blip_scale = 1
 		if t > blip.duration then
 
-			local flash = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
+			local flash = 1 - math.min((t - blip.duration) / (MIN_DELAY * time_scale), 1)
 			blip_scale = flash
 
 		end
@@ -525,12 +525,12 @@ if CLIENT then
 	end
 
 	local blip_r,blip_g,blip_b,blip_a = blip_color:Unpack()
-	function meta:DrawFlash(maxDist, blip, time)
+	function meta:DrawFlash(maxDist, blip, time, time_scale)
 
 		local t = time - blip.time
 		if t > blip.duration then
 
-			local fl = 1 - math.min((t - blip.duration) / MIN_DELAY, 1)
+			local fl = 1 - math.min((t - blip.duration) / (MIN_DELAY * time_scale), 1)
 			if fl > 0 then
 				lerped:SetUnpacked( blip_r*fl, blip_g*fl, blip_b*fl, blip_a*fl )
 				self:Draw( maxDist, lerped, 8, nil, nil, true )

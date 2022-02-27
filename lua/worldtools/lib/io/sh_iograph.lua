@@ -112,9 +112,12 @@ function meta:Init( mapData )
 
 end
 
-function meta:Tick( frame_time )
+function meta:Tick( time, frame_time )
 
-	if SERVER then self:GetEventQueue():Service() end
+	if SERVER then
+		self:GetEventQueue():SetTime( time )
+		self:GetEventQueue():Service( time ) 
+	end
 
 end
 

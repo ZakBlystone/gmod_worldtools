@@ -4,6 +4,7 @@ if SERVER then
 
 	util.AddNetworkString("io_net_event")
 	util.AddNetworkString("io_player_ride")
+	util.AddNetworkString("io_time_sync")
 
 end
 
@@ -57,10 +58,16 @@ if SERVER then
 	local max_events_in_pack = 100
 	local max_pack_duration = 0.5
 	local next_pack_time = 0
+	local next_time_sync = 0
 
 	function AddPendingEvent( output )
 
-		local time = CurTime()
+		local data = wt_bsp.GetCurrent()
+		if data == nil or data:IsLoading() then return end
+		local graph = data.iograph
+		local world = data.ioworld
+
+		local time = world.io_time
 
 		local pack = nil
 		for _,v in ipairs(event_packs) do
@@ -86,7 +93,27 @@ if SERVER then
 
 	end
 
+	function ExpediteTimeSync()
+
+		next_time_sync = 0
+
+	end
+
 	function Tick( frame_time )
+
+		if next_time_sync < CurTime() then
+			next_time_sync = CurTime() + 1
+
+			local data = wt_bsp.GetCurrent()
+			if data ~= nil and data.ioworld ~= nil then
+				local world = data.ioworld
+				net.Start("io_time_sync")
+				net.WriteFloat(CurTime())
+				net.WriteFloat(world.io_time)
+				net.WriteFloat(world.io_time_scale)
+				net.Broadcast()
+			end
+		end
 
 		--print("PENDING: " .. #event_packs)
 		if next_pack_time > CurTime() then return end
@@ -103,7 +130,7 @@ if SERVER then
 			if ev.output then
 				print(" - " .. tostring(ev.output))
 			elseif ev.delta then
-				print(" + " .. ev.delta)
+				--print(" + " .. ev.delta)
 			end
 		end
 
@@ -165,7 +192,7 @@ else
 				local hash = net.ReadData(20)
 				local edge = graph:FindEdgeByHash(hash)
 				if edge ~= nil then
-					print("TIME: +" .. (time - CurTime()))
+					--print("TIME: +" .. (time - world.io_time))
 					world:AddBlipFromEdge(edge, time)
 				end
 			else
@@ -173,6 +200,28 @@ else
 			end
 		end
 
+
+	end)
+
+	net.Receive("io_time_sync", function(len, ply)
+
+		local data = wt_bsp.GetCurrent()
+		if data == nil or data:IsLoading() then return end
+		local graph = data.iograph
+		local world = data.ioworld
+
+		local curtime = net.ReadFloat()
+		local io_time = net.ReadFloat()
+		local io_time_scale = net.ReadFloat()
+
+		local diff = CurTime() - curtime
+
+		local prev = world.io_time
+
+		world.io_time = io_time + diff * io_time_scale
+		world.io_time_scale = io_time_scale
+
+		print("SYNC DIFF: " .. (world.io_time - prev), diff)
 
 	end)
 

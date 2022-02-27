@@ -15,6 +15,8 @@ function meta:Init(iograph)
 	self.should_draw_trace_index = {}
 	self.graph = iograph
 	self.blips = {}
+	self.io_time = 0
+	self.io_time_scale = 1
 	self:BuildTraces()
 
 	return self
@@ -139,9 +141,38 @@ function meta:BuildTraces()
 
 end
 
+function meta:SetTimeScale( time_scale )
+
+	if SERVER then
+
+		if time_scale ~= self.io_time_scale then
+			self.io_time_scale = time_scale
+
+			wt_ionet.ExpediteTimeSync()
+		end
+
+	end
+
+end
+
 function meta:Tick( frame_time )
 
-	self.graph:Tick( frame_time )
+	if SERVER then
+		local freeze = false
+		for _,v in ipairs(player.GetAll()) do
+			local w = v:GetActiveWeapon()
+			if w and w:GetClass() == "weapon_iotool" then
+				if v:KeyDown(IN_RELOAD) then freeze = true break end
+			end
+		end
+
+		self:SetTimeScale( freeze and 0 or wt_iocommon.wt_timescale:GetFloat() )
+	end
+
+	self.io_time = self.io_time + frame_time * self.io_time_scale
+	--print(self.io_time, self.io_time_scale)
+
+	self.graph:Tick( self.io_time, frame_time * self.io_time_scale )
 
 end
 
@@ -168,13 +199,13 @@ if CLIENT then
 	function meta:UpdateBlips()
 
 		--self.blips = {}
-		local time = CurTime()
+		local time = self.io_time
 
 		for i=#self.blips, 1, -1 do
 
 			local blip = self.blips[i]
 			local t = time - blip.time
-			if t > blip.duration + MIN_DELAY then
+			if t > blip.duration + MIN_DELAY * self.io_time_scale then
 
 				table.remove(self.blips, i) 
 				continue
@@ -215,7 +246,7 @@ if CLIENT then
 
 	function meta:AddBlipFromEdge( edge, time )
 
-		time = time or CurTime()
+		time = time or self.io_time
 
 		local trace = self.io_to_trace[edge]
 		assert(trace)
@@ -289,12 +320,12 @@ if CLIENT then
 
 		render.SetMaterial(lasermat)
 		for _, blip in ipairs(self.blips) do
-			trace_draw_flash(traces[blip.trace_id], cull_distance, blip, time)
+			trace_draw_flash(traces[blip.trace_id], cull_distance, blip, self.io_time, self.io_time_scale)
 		end
 
 		render.SetMaterial(flaremat)
 		for _, blip in ipairs(self.blips) do
-			trace_draw_blip(traces[blip.trace_id], blip, time)
+			trace_draw_blip(traces[blip.trace_id], blip, self.io_time, self.io_time_scale)
 		end
 
 		--print("Draw[" .. num_drawn .. "] took " .. (SysTime() - t) * 1000 .. "ms")
@@ -342,13 +373,13 @@ function New(...)
 
 end
 
-if wt_bsp and wt_bsp.GetCurrent() ~= nil then
+--[[if wt_bsp and wt_bsp.GetCurrent() ~= nil then
 
 	print("Create IO World")
 	wt_bsp.GetCurrent().iograph = wt_iograph.New( wt_bsp.GetCurrent() )
 	wt_bsp.GetCurrent().ioworld = New( wt_bsp.GetCurrent().iograph )
 
-end
+end]]
 
 if CLIENT then
 

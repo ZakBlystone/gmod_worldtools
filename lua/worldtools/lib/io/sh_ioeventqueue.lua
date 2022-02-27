@@ -10,7 +10,14 @@ meta.__index = meta
 function meta:Init()
 
 	self.pending = {}
+	self.io_time = 0
 	return self
+
+end
+
+function meta:SetTime( time )
+
+	self.io_time = time
 
 end
 
@@ -18,7 +25,7 @@ function meta:AddRaw(entity, func, activator, caller, delay, param)
 
 	if not IsValid(entity) then return end
 
-	local fire_time = CurTime() + (delay or 0)
+	local fire_time = self.io_time + (delay or 0)
 
 	local event = nil
 	for i=1, #self.pending do
@@ -44,15 +51,12 @@ function meta:AddRaw(entity, func, activator, caller, delay, param)
 
 end
 
-function meta:Service()
-
-	local time = CurTime()
-	--if true then return end
+function meta:Service( time )
 
 	while #self.pending > 0 do
 
 		local event = self.pending[1]
-		if event.fire_time > time then break end
+		if event.fire_time + 0.0001 > time then break end
 		if not IsValid(event.entity) then
 			print("event has missing entity")
 			goto skip
