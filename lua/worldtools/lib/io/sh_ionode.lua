@@ -267,16 +267,11 @@ function meta:Moved()
 	end
 end
 
-function meta:Fire(func, activator, caller, delay, param)
+function meta:FireInput(func, activator, caller, delay, param)
 
 	local real = self:GetEntity()
 	if IsValid(real) then
-		real:Fire(
-			func, 
-			param or nil, 
-			delay or 0, 
-			activator, 
-			caller)
+		self.graph:GetEventQueue():AddRaw(real, func, activator, caller, delay, param)
 	else
 		print("COULDN'T FIND REAL ENTITY FOR: " .. self:GetName())
 	end

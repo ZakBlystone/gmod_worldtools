@@ -28,6 +28,7 @@ include("io/sh_iotrace.lua")
 include("io/sh_iomove.lua")
 include("io/sh_ioworld.lua")
 include("io/sh_iointeract.lua")
+include("io/sh_ioeventqueue.lua")
 
 include("sh_bsp.lua")
 include("sh_bspquery.lua")

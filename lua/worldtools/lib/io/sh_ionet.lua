@@ -86,7 +86,7 @@ if SERVER then
 
 	end
 
-	hook.Add("Tick", "wt_ionet_eventpack_tick", function()
+	function Tick( frame_time )
 
 		--print("PENDING: " .. #event_packs)
 		if next_pack_time > CurTime() then return end
@@ -122,7 +122,7 @@ if SERVER then
 		end
 		net.Broadcast()
 
-	end)
+	end
 
 	net.Receive("io_player_ride", function(len, ply)
 
@@ -137,6 +137,8 @@ if SERVER then
 	end)
 
 else
+
+	function Tick() end
 
 	function RequestRideTrace( trace, along )
 

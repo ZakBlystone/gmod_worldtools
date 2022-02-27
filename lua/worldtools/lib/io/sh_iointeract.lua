@@ -28,7 +28,7 @@ if SERVER then
 			local node = graph:GetByIndex(ent)
 			if param == "" then param = nil end
 			if node ~= nil then
-				node:Fire(event, ply, ply, 0, param)
+				node:FireInput(event, ply, ply, 0, param)
 			end
 
 		elseif cmd == MSG_ENTITY_FIRE_OUTPUT then

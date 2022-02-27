@@ -139,6 +139,12 @@ function meta:BuildTraces()
 
 end
 
+function meta:Tick( frame_time )
+
+	self.graph:Tick( frame_time )
+
+end
+
 
 if CLIENT then
 

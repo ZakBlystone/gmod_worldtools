@@ -264,6 +264,18 @@ end
 
 local proxy_name = "__wt_io_proxy"
 
+hook.Add("Tick", "wt_iocommon_tick", function()
+
+	local frame_time = FrameTime()
+	local world = nil
+	if wt_bsp.GetCurrent() then world = wt_bsp.GetCurrent().ioworld end
+
+	if world then world:Tick(frame_time) end
+
+	wt_ionet.Tick(frame_time)
+
+end)
+
 if SERVER then
 
 	local noReroute = CreateConVar(

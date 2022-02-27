@@ -77,7 +77,7 @@ function eventDataMeta:Fire(activator, caller, delay, param)
 
 	wt_ionet.AddPendingEvent(self)
 
-	self.to:Fire(
+	self.to:FireInput(
 		self.func, 
 		activator or from_ent,
 		caller or from_ent,
@@ -95,6 +95,7 @@ function meta:Init( mapData )
 	self.entsByID = {}
 	self.nodes = {}
 	self.edges = {}
+	self.event_queue = wt_ioeventqueue.New()
 
 	wt_task.Yield("sub", "creating io nodes")
 
@@ -108,6 +109,18 @@ function meta:Init( mapData )
 	self:Link()
 
 	return self
+
+end
+
+function meta:Tick( frame_time )
+
+	if SERVER then self:GetEventQueue():Service() end
+
+end
+
+function meta:GetEventQueue()
+
+	return self.event_queue
 
 end
 
