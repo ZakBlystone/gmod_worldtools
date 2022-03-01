@@ -123,7 +123,7 @@ if SERVER then
 		local pack = event_packs[1]
 		table.remove(event_packs, 1)
 
-		print("SEND EVENT PACK @" .. pack.time .. " : " .. #pack.events .. " event(s)")
+		--print("SEND EVENT PACK @" .. pack.time .. " : " .. #pack.events .. " event(s)")
 		for i=1, #pack.events do
 			local ev = pack.events[i]
 			if ev.output then
@@ -220,7 +220,7 @@ else
 		world.io_time = io_time + diff * io_time_scale
 		world.io_time_scale = io_time_scale
 
-		print("SYNC DIFF: " .. (world.io_time - prev), diff)
+		--print("SYNC DIFF: " .. (world.io_time - prev), diff)
 
 	end)
 

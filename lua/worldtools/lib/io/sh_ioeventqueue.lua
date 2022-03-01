@@ -7,9 +7,11 @@ G_IOEVENTQUEUE_META = G_IOEVENTQUEUE_META or {}
 local meta = G_IOEVENTQUEUE_META
 meta.__index = meta
 
-function meta:Init()
+function meta:Init( graph )
 
+	self.graph = graph
 	self.pending = {}
+	self.counters = {}
 	self.io_time = 0
 	return self
 
@@ -21,11 +23,60 @@ function meta:SetTime( time )
 
 end
 
-function meta:AddRaw(entity, func, activator, caller, delay, param)
+-- Number of inbound pending events for a node
+function meta:GetPendingCount(node)
 
-	if not IsValid(entity) then return end
+	return self.counters[node] or 0
+
+end
+
+function meta:Clear()
+
+	self.counters = {}
+	self.pending = {}
+
+end
+
+function meta:DetectCycle(node, func)
+
+	for i=1, #self.pending do
+
+		local cycle = self.graph:GetCommonCycle(node, self.pending[i].node)
+		if cycle then
+
+			local triggers_cycle = nil
+			for _,v in ipairs(cycle) do
+
+				if v.func == func and v.to == node then
+					triggers_cycle = v
+					break
+				end
+
+			end
+
+			if triggers_cycle ~= nil then
+
+				MsgC(Color(255,80,80), 
+					"Canceling event: " .. tostring(triggers_cycle) .. "\n", 
+					Color(255,255,255),
+					"Introducing new event into pending cycle might create additional feedback loop\n")
+				return true
+
+			end
+
+		end
+
+	end
+
+	return false
+
+end
+
+function meta:AddRaw(node, func, activator, caller, delay, param)
 
 	local fire_time = self.io_time + (delay or 0)
+
+	if self:DetectCycle(node, func) then return end
 
 	local event = nil
 	for i=1, #self.pending do
@@ -42,12 +93,14 @@ function meta:AddRaw(entity, func, activator, caller, delay, param)
 	end
 
 	event.fire_time = fire_time
-	event.entity = entity
+	event.node = node
 	event.func = func
 	event.activator = activator
 	event.caller = caller
 	event.delay = delay
 	event.param = param
+
+	self.counters[node] = (self.counters[node] or 0) + 1
 
 end
 
@@ -57,12 +110,16 @@ function meta:Service( time )
 
 		local event = self.pending[1]
 		if event.fire_time + 0.0001 > time then break end
-		if not IsValid(event.entity) then
-			print("event has missing entity")
+
+		self.counters[event.node] = (self.counters[event.node] or 1) - 1
+
+		local entity = event.node:GetEntity()
+		if not IsValid(entity) then
+			print("COULDN'T FIND REAL ENTITY FOR: " .. event.node:GetName())
 			goto skip
 		end
 
-		event.entity:Fire(
+		entity:Fire(
 			event.func, 
 			event.param or nil, 
 			0, 
@@ -76,8 +133,8 @@ function meta:Service( time )
 
 end
 
-function New()
+function New( graph )
 
-	return setmetatable({}, meta):Init()
+	return setmetatable({}, meta):Init( graph )
 
 end

@@ -269,12 +269,7 @@ end
 
 function meta:FireInput(func, activator, caller, delay, param)
 
-	local real = self:GetEntity()
-	if IsValid(real) then
-		self.graph:GetEventQueue():AddRaw(real, func, activator, caller, delay, param)
-	else
-		print("COULDN'T FIND REAL ENTITY FOR: " .. self:GetName())
-	end
+	self.graph:GetEventQueue():AddRaw(self, func, activator, caller, delay, param)
 
 end
 

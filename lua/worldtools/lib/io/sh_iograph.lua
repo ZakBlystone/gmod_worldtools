@@ -95,7 +95,9 @@ function meta:Init( mapData )
 	self.entsByID = {}
 	self.nodes = {}
 	self.edges = {}
-	self.event_queue = wt_ioeventqueue.New()
+	self.cycles = {}
+	self.cycle_nodes = {}
+	self.event_queue = wt_ioeventqueue.New( self )
 
 	wt_task.Yield("sub", "creating io nodes")
 
@@ -121,9 +123,20 @@ function meta:Tick( time, frame_time )
 
 end
 
-function meta:GetEventQueue()
+function meta:GetEventQueue() return self.event_queue end
+function meta:GetCycles() return self.cycles end
+function meta:GetNodeCycles( node ) return self.cycle_nodes[node] end
+function meta:GetCommonCycle( node_a, node_b )
 
-	return self.event_queue
+	local a_cycles = self.cycle_nodes[node_a]
+	local b_cycles = self.cycle_nodes[node_b]
+	if a_cycles == nil or b_cycles == nil then
+		return nil
+	end
+
+	for k,v in pairs(a_cycles) do
+		if b_cycles[k] then return self.cycles[k] end
+	end
 
 end
 
@@ -211,7 +224,93 @@ function meta:Link()
 
 	end
 
+	self:DetectCycles()
+
 end
+
+local non_cyclical_inputs = {
+	["Kill"] = true,
+}
+
+function meta:TraverseEdges( node, visited, cycle )
+
+	if visited[node] then
+		if cycle[1].from == node then
+			return true
+		else
+			return false
+		end
+	end
+
+	visited[node] = true
+
+	for k, v in self:NodeOutputs(node) do
+
+		if non_cyclical_inputs[v.func] then return false end
+
+		cycle[#cycle+1] = v
+		if self:TraverseEdges(v.to, visited, cycle) then
+			return true
+		else
+			table.remove(cycle, #cycle)
+		end
+
+	end
+
+	return false
+
+end
+
+function meta:DetectCycles()
+
+	print("Detecting IO cycles:")
+
+	self.cycles = {}
+	self.cycle_nodes = {}
+
+	local ignored = {}
+
+	local function assign_cycle(edge, id)
+		self.cycle_nodes[edge.from] = self.cycle_nodes[edge.from] or {}
+		self.cycle_nodes[edge.to] = self.cycle_nodes[edge.to] or {}
+		self.cycle_nodes[edge.from][id] = true
+		self.cycle_nodes[edge.to][id] = true
+	end
+
+	for node in self:Nodes() do
+
+		if self.cycle_nodes[node] then continue end
+
+		local visited = {}
+		local cycle = {}
+		if self:TraverseEdges( node, visited, cycle ) then
+
+			if #cycle > 0 then
+				
+				MsgC(Color(100,255,80), #self.cycles+1 .. " : ")
+
+				for k,v in ipairs(cycle) do
+					MsgC(Color(255,100,100), tostring(v) .. (k ~= #cycle and " -> " or ""))
+					assign_cycle(v, #self.cycles+1)
+				end
+
+				Msg("\n")
+				self.cycles[#self.cycles+1] = cycle
+
+			end
+
+		end
+
+	end
+
+end
+
+--[[if SERVER then
+
+	local graph = wt_bsp.GetCurrent().iograph
+	graph:DetectCycles()
+
+end]]
 
 -- Handle a sunk output from the engine
 function meta:HandleOutput( caller, activator, event, data )

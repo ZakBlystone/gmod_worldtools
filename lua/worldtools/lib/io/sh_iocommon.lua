@@ -263,14 +263,10 @@ function CategorizedIO(class, keys, out)
 end
 
 local proxy_name = "__wt_io_proxy"
-local last_time = 0
 
 hook.Add("Tick", "wt_iocommon_tick", function()
 
-	if last_time == 0 then last_time = RealTime() end
-
-	local frame_time = FrameTime() --1/60 --RealTime() - last_time
-	last_time = RealTime()
+	local frame_time = FrameTime()
 
 	local world = nil
 	if wt_bsp.GetCurrent() then world = wt_bsp.GetCurrent().ioworld end
@@ -337,6 +333,11 @@ if SERVER then
 
 		for _, ent in ipairs(ents.GetAll()) do
 			BindEntityToSink(ent, ent:GetClass())
+		end
+
+		-- Clear any pending events
+		if wt_bsp.GetCurrent().iograph then
+			wt_bsp.GetCurrent().iograph:GetEventQueue():Clear()
 		end
 
 	end
