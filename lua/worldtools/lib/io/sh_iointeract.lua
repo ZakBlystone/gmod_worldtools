@@ -9,6 +9,7 @@ function IsInMenu() return inMenu end
 MSG_ENTITY_FIRE_INPUT = 0
 MSG_ENTITY_FIRE_OUTPUT = 1
 MSG_ENTITY_FIRE_OUTPUT_SPECIFIC = 2
+MSG_ENTITY_CANCEL_OUTPUT = 3
 MSG_BITS = 2
 
 if SERVER then
@@ -44,7 +45,18 @@ if SERVER then
 
 			local hash = net.ReadData(20)
 			local edge = graph:FindEdgeByHash(hash)
-			edge:Fire()
+			local immediate = net.ReadBit() == 1
+			if edge ~= nil then
+				edge:Fire(nil, nil, immediate and 0 or nil)
+			end
+
+		elseif cmd == MSG_ENTITY_CANCEL_OUTPUT then
+
+			local hash = net.ReadData(20)
+			local edge = graph:FindEdgeByHash(hash)
+			if edge ~= nil then
+				graph:GetEventQueue():Cancel( edge.to, edge.func )
+			end
 
 		end
 
@@ -84,10 +96,20 @@ elseif CLIENT then
 
 	end
 
-	local function SendSpecificOutput(output)
+	local function SendSpecificOutput(output, immediate)
 
 		net.Start("io_interact")
 		net.WriteUInt(MSG_ENTITY_FIRE_OUTPUT_SPECIFIC, MSG_BITS)
+		net.WriteData(output:GetRawHash(), 20)
+		net.WriteBit(immediate or false)
+		net.SendToServer()
+
+	end
+
+	local function SendCancelOutput(output)
+
+		net.Start("io_interact")
+		net.WriteUInt(MSG_ENTITY_CANCEL_OUTPUT, MSG_BITS)
 		net.WriteData(output:GetRawHash(), 20)
 		net.SendToServer()
 
@@ -188,7 +210,7 @@ elseif CLIENT then
 		local t = {
 			x = ScrW()/2,
 			y = ScrH()/2,
-			width = 200,
+			width = 250,
 			options = {
 				{ title = node:GetName() .. "<" .. node:GetClass() .. ">", },
 				{ title = "Inputs", icon = "icon16/lightning_go.png", options = input_options },
@@ -199,6 +221,37 @@ elseif CLIENT then
 		local menu = wt_modal.Menu(t)
 		menu:SetKeyboardInputEnabled(true)
 		menu:SetMouseInputEnabled(true)
+
+	end
+
+	local function OpenTraceMenu(world, trace)
+
+		local edge = world:GetIOForTrace(trace)
+		if edge == nil then return false end
+
+		local function OpenNode(node)
+			timer.Simple(0.1, function() OpenNodeMenu( node ) end)
+		end
+
+		local t = {
+			x = ScrW()/2,
+			y = ScrH()/2,
+			width = 250,
+			options = {
+				{ title = "Cancel pending events", icon = "icon16/delete.png",  func = function() SendCancelOutput(edge) end, },
+				{ title = "Execute", icon = "icon16/add.png", func = function() SendSpecificOutput(edge) end, },
+				{ title = "Execute Immediately", icon = "icon16/resultset_next.png", func = function() SendSpecificOutput(edge, true) end, },
+				{ title = "From: " .. edge.from:GetName(), icon = "icon16/arrow_right.png", func = function() OpenNode(edge.from) end, },
+				{ title = "To: " .. edge.to:GetName(), icon = "icon16/arrow_down.png", func = function() OpenNode(edge.to) end, },
+				{ title = ": " .. tostring(edge.func) .. "(" .. tostring(edge.param) .. ") @" .. (edge.delay or 0) .. " seconds" }
+			},
+		}
+
+		local menu = wt_modal.Menu(t)
+		menu:SetKeyboardInputEnabled(true)
+		menu:SetMouseInputEnabled(true)
+
+		return true
 
 	end
 
@@ -217,8 +270,23 @@ elseif CLIENT then
 
 	function CL_InteractTrace(world, trace, key, pressed)
 		local ply = LocalPlayer()
-		ply:EmitSound( "buttons/button3.wav" )
-		return true
+
+		if key == IN_ATTACK2 then
+			if OpenTraceMenu(world, trace) then
+				ply:EmitSound( "buttons/button4.wav", 75, 170 )
+			else
+				ply:EmitSound( "buttons/button3.wav" )
+			end
+			return true
+		elseif key == IN_ATTACK then
+			local edge = world:GetIOForTrace(trace)
+			if edge == nil then return false end
+			SendSpecificOutput(edge)
+			ply:EmitSound( "buttons/button3.wav" )
+			return true
+		end
+
+		return false
 	end
 
 end

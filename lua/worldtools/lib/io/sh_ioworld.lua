@@ -519,7 +519,7 @@ if CLIENT then
 
 			local trace = LocalPlayer().look_at_trace
 			if trace ~= nil then
-				if wt_iointeract.CL_InteractTrace(world, node, key, true) then return end
+				if wt_iointeract.CL_InteractTrace(world, trace, key, true) then return end
 			end
 
 			ply:EmitSound( "Weapon_Pistol.Empty" )

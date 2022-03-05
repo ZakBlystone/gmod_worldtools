@@ -72,6 +72,16 @@ function meta:DetectCycle(node, func)
 
 end
 
+function meta:Cancel(node, func)
+
+	for i=#self.pending, 1, -1 do
+		if self.pending[i].node == node and self.pending[i].func == func then
+			table.remove(self.pending, i)
+		end
+	end
+
+end
+
 function meta:AddRaw(node, func, activator, caller, delay, param)
 
 	local fire_time = self.io_time + (delay or 0)
