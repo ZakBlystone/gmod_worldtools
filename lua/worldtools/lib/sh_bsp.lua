@@ -286,12 +286,14 @@ AddProcess( "Converting Entities", function( data )
 		if k == "classname" then
 			wt_task.Yield("sub", tostring(v))
 		end
-		if string.Left( k, 2 ) == "On" then
-			t.outputs = t.outputs or {}
-
-			local parsed = ProcessOutput(k, v)
-			if parsed then t.outputs[#t.outputs+1] = parsed end
-			return nil
+		if t.classname then
+			local fgd = wt_iocommon.GetFGDClass(t.classname)
+			if fgd.outputs[k] then
+				t.outputs = t.outputs or {}
+				local parsed = ProcessOutput(k, v)
+				if parsed then t.outputs[#t.outputs+1] = parsed end
+				return nil
+			end
 		end
 		return v
 
@@ -321,7 +323,8 @@ AddProcess( "Converting Entities", function( data )
 
 	sm2.object.enter = function(ch) obj = { index = (#out+1) } end
 	sm2.object.tick = function(ch) sm(ch) end
-	sm2.object.exit = function(ch) table.insert( out, obj ) end
+	sm2.object.exit = function(ch) out[#out+1] = obj end
+
 	sm2[sm2.none .. sm2.object] = match("{") - smstate( sm.string )
 	sm2[sm2.object .. sm2.none] = match("}") - smstate( sm.string )
 

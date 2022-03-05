@@ -313,12 +313,12 @@ end
 end]]
 
 -- Handle a sunk output from the engine
-function meta:HandleOutput( caller, activator, event, data )
+function meta:HandleOutput( caller, activator, event, param )
 
 	local ent = self:GetByEntity(caller)
 	if ent ~= nil then
 
-		ent:FireOutput( event, activator, caller )
+		ent:FireOutput( event, activator, caller, param )
 
 	else
 

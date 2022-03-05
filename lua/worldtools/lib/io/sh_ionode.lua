@@ -275,13 +275,15 @@ function meta:FireInput(func, activator, caller, delay, param)
 
 end
 
-function meta:FireOutput( event, activator, caller )
+function meta:FireOutput( event, activator, caller, param )
+
+	--print("OUTPUT: " .. self:GetName() .. ":" .. event .. " -> " .. tostring(param))
 
 	for _,v in self:Outputs() do
 
 		if v.event == event then
 
-			v:Fire(activator, caller)
+			v:Fire(activator, caller, nil, param)
 
 		end
 

@@ -86,6 +86,8 @@ function meta:AddRaw(node, func, activator, caller, delay, param)
 
 	local fire_time = self.io_time + (delay or 0)
 
+	--print("ADD INPUT: " .. node:GetName() .. "." .. func .. "(" .. tostring(param) .. ")")
+
 	if self:DetectCycle(node, func) then return end
 
 	local event = nil
@@ -128,6 +130,8 @@ function meta:Service( time )
 			print("COULDN'T FIND REAL ENTITY FOR: " .. event.node:GetName())
 			goto skip
 		end
+
+		--print("FIRE: " .. event.node:GetName() .. "." .. event.func .. "(" .. tostring(event.param) .. ")")
 
 		entity:Fire(
 			event.func, 
