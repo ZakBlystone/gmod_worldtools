@@ -282,7 +282,7 @@ end
 if SERVER then
 	hook.Add("Tick", "wt_iocommon_tick", TickWorld)
 else
-	hook.Add("PostDrawOpaqueRenderables", "wt_iocommon_tick", TickWorld)
+	hook.Add("PreRender", "wt_iocommon_tick", TickWorld)
 end
 
 if SERVER then
