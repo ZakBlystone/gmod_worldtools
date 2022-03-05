@@ -286,11 +286,18 @@ if SERVER then
 		{ FCVAR_ARCHIVE }, 
 		"Disable IO Rerouting")
 
+	function IsRerouteEnabled()
+
+		return not noReroute:GetBool()
+
+	end
+
 	local function BindEntityToSink(entity, class)
 
-		if noReroute:GetBool() then return end
+		--if noReroute:GetBool() then return end
 
 		if not IsValid(entity) then print("FAILED TO BIND: " .. tostring(class)) return end
+		if entity:MapCreationID() == -1 then print("Not binding: " .. tostring(entity) .. " because it was not in the BSP data") return end
 		if entity:GetClass() == "wt_io_proxy" then return end
 		if entity.bound_to_proxy then return end
 		entity.bound_to_proxy = true
@@ -347,7 +354,7 @@ if SERVER then
 	local function SetupEntity(entity)
 
 		if not IsValid(entity) then return end
-		if noReroute:GetBool() then return end
+		--if noReroute:GetBool() then return end
 
 		local class = entity:GetClass()
 		--timer.Simple(0, function() BindEntityToSink(entity, class) end)
@@ -369,7 +376,7 @@ if SERVER then
 
 		--print(tostring(entity) .. "." .. tostring(key) .. " = " .. tostring(value))
 
-		if noReroute:GetBool() then return nil end
+		if noReroute:GetBool() then return end
 
 		local fgd = FGDClasses[entity:GetClass()]
 		if fgd then

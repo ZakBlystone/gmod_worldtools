@@ -320,6 +320,10 @@ function meta:HandleOutput( caller, activator, event, data )
 
 		ent:FireOutput( event, activator, caller )
 
+	else
+
+		print("Entity: " .. tostring(caller) .. " does not exist in graph")
+
 	end
 
 end

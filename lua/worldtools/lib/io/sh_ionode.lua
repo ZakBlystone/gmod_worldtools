@@ -269,6 +269,8 @@ end
 
 function meta:FireInput(func, activator, caller, delay, param)
 
+	if not wt_iocommon.IsRerouteEnabled() then return end
+
 	self.graph:GetEventQueue():AddRaw(self, func, activator, caller, delay, param)
 
 end
