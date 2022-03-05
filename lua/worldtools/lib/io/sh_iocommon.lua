@@ -264,7 +264,7 @@ end
 
 local proxy_name = "__wt_io_proxy"
 
-hook.Add("Tick", "wt_iocommon_tick", function()
+local function TickWorld()
 
 	local frame_time = FrameTime()
 
@@ -275,7 +275,15 @@ hook.Add("Tick", "wt_iocommon_tick", function()
 
 	wt_ionet.Tick(frame_time)
 
-end)
+	--print("tick: ", frame_time)
+
+end
+
+if SERVER then
+	hook.Add("Tick", "wt_iocommon_tick", TickWorld)
+else
+	hook.Add("PostDrawOpaqueRenderables", "wt_iocommon_tick", TickWorld)
+end
 
 if SERVER then
 
