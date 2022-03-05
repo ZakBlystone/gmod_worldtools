@@ -24,8 +24,8 @@ function ENT:AcceptInput( name, activator, caller, data )
 
 			if wt_bsp and wt_bsp.GetCurrent() ~= nil then
 
-				if wt_bsp.GetCurrent().iograph ~= nil then
-					wt_bsp.GetCurrent().iograph:HandleOutput(caller, activator, event, data)
+				if wt_bsp.GetCurrent().ioworld ~= nil then
+					wt_bsp.GetCurrent().ioworld:HandleOutput(caller, activator, event, data)
 				end
 
 			end

@@ -15,11 +15,87 @@ function meta:Init(iograph)
 	self.should_draw_trace_index = {}
 	self.graph = iograph
 	self.blips = {}
+	self.edge_counters = {}
 	self.io_time = 0
 	self.io_time_scale = 1
 	self:BuildTraces()
 
+	if SERVER then
+		self.event_queue = wt_ioeventqueue.New( self.graph )
+	end
+
 	return self
+
+end
+
+function meta:Reset()
+
+	self:GetEventQueue():Clear()
+	self.edge_counters = {}
+
+end
+
+-- Handle a sunk output from the engine
+function meta:HandleOutput( caller, activator, event, param )
+
+	local ent = self.graph:GetByEntity(caller)
+	if ent ~= nil then
+
+		self:FireOutput( ent, event, activator, caller, param )
+
+	else
+
+		print("Entity: " .. tostring(caller) .. " does not exist in graph")
+
+	end
+
+end
+
+-- Fire an input on an entity
+function meta:FireInput( node, func, activator, caller, delay, param )
+
+	if not wt_iocommon.IsRerouteEnabled() then return end
+
+	self:GetEventQueue():AddRaw(node, func, activator, caller, delay, param)
+
+end
+
+-- Fire an output on an entity
+function meta:FireOutput( node, event, activator, caller, param )
+
+	--print("OUTPUT: " .. self:GetName() .. ":" .. event .. " -> " .. tostring(param))
+
+	for _,v in node:Outputs() do
+
+		if v.event == event then
+
+			self:FireOutputEdge(v, activator, caller, nil, param)
+
+		end
+
+	end
+
+end
+
+-- Fire a specific output edge
+function meta:FireOutputEdge( edge, activator, caller, delay, param )
+
+	if edge == nil then return end
+
+	local from_ent = edge.from:GetEntity()
+
+	self.edge_counters[edge] = (self.edge_counters[edge] or 0) + 1
+	if edge.refire ~= -1 and self.edge_counters[edge] > edge.refire then return end
+
+	wt_ionet.AddPendingEvent( edge )
+
+	self:FireInput(
+		edge.to,
+		edge.func, 
+		activator or from_ent,
+		caller or from_ent,
+		delay or edge:GetDelay(),
+		param or edge.param)
 
 end
 
@@ -32,6 +108,12 @@ function meta:InteractTrace( ply, mode, trace, along )
 		output:Fire(ply, ply, 0)
 
 	end
+
+end
+
+function meta:GetEventQueue()
+
+	return self.event_queue
 
 end
 
@@ -167,12 +249,18 @@ function meta:Tick( frame_time )
 		end
 
 		self:SetTimeScale( self.freeze and 0 or wt_iocommon.wt_timescale:GetFloat() )
+	
 	end
 
 	self.io_time = self.io_time + frame_time * self.io_time_scale
 	--print(self.io_time, self.io_time_scale)
 
-	self.graph:Tick( self.io_time, frame_time * self.io_time_scale )
+	if SERVER then
+
+		self:GetEventQueue():SetTime( self.io_time )
+		self:GetEventQueue():Service( self.io_time )
+
+	end
 
 end
 

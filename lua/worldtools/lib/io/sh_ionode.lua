@@ -267,30 +267,6 @@ function meta:Moved()
 	end
 end
 
-function meta:FireInput(func, activator, caller, delay, param)
-
-	if not wt_iocommon.IsRerouteEnabled() then return end
-
-	self.graph:GetEventQueue():AddRaw(self, func, activator, caller, delay, param)
-
-end
-
-function meta:FireOutput( event, activator, caller, param )
-
-	--print("OUTPUT: " .. self:GetName() .. ":" .. event .. " -> " .. tostring(param))
-
-	for _,v in self:Outputs() do
-
-		if v.event == event then
-
-			v:Fire(activator, caller, nil, param)
-
-		end
-
-	end
-
-end
-
 local angleIdent = Angle(0,0,0)
 
 function meta:Update()

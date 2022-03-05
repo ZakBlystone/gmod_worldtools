@@ -58,33 +58,8 @@ function eventDataMeta:ComputeHash()
 end
 
 function eventDataMeta:GetDelay() return (self.delay or 0) end
-
-function eventDataMeta:GetHash()
-
-	return self.hash
-
-end
-
-function eventDataMeta:GetRawHash()
-
-	return self.rawhash
-
-end
-
-function eventDataMeta:Fire(activator, caller, delay, param)
-
-	local from_ent = self.from:GetEntity()
-
-	wt_ionet.AddPendingEvent(self)
-
-	self.to:FireInput(
-		self.func, 
-		activator or from_ent,
-		caller or from_ent,
-		delay or self:GetDelay(),
-		param or self.param)
-
-end
+function eventDataMeta:GetHash() return self.hash end
+function eventDataMeta:GetRawHash() return self.rawhash end
 
 local meta = G_IOGRAPH_META
 meta.__index = meta
@@ -97,7 +72,6 @@ function meta:Init( mapData )
 	self.edges = {}
 	self.cycles = {}
 	self.cycle_nodes = {}
-	self.event_queue = wt_ioeventqueue.New( self )
 
 	wt_task.Yield("sub", "creating io nodes")
 
@@ -114,16 +88,6 @@ function meta:Init( mapData )
 
 end
 
-function meta:Tick( time, frame_time )
-
-	if SERVER then
-		self:GetEventQueue():SetTime( time )
-		self:GetEventQueue():Service( time ) 
-	end
-
-end
-
-function meta:GetEventQueue() return self.event_queue end
 function meta:GetCycles() return self.cycles end
 function meta:GetNodeCycles( node ) return self.cycle_nodes[node] end
 function meta:GetCommonCycle( node_a, node_b )
@@ -190,11 +154,13 @@ function meta:Link()
 					func = output.func,
 					param = output.param,
 					delay = (output.delay or 0),
-					refire = output.refire,
+					refire = tonumber(output.refire),
 				}
 
 				setmetatable(eventData, eventDataMeta)
 				eventData:ComputeHash()
+
+				print(eventData)
 
 				local hash = eventData:GetHash()
 
@@ -311,22 +277,6 @@ end
 	graph:DetectCycles()
 
 end]]
-
--- Handle a sunk output from the engine
-function meta:HandleOutput( caller, activator, event, param )
-
-	local ent = self:GetByEntity(caller)
-	if ent ~= nil then
-
-		ent:FireOutput( event, activator, caller, param )
-
-	else
-
-		print("Entity: " .. tostring(caller) .. " does not exist in graph")
-
-	end
-
-end
 
 function meta:FindEdgeByHash( hash )
 

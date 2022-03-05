@@ -18,6 +18,7 @@ if SERVER then
 
 	net.Receive("io_interact", function(len, ply)
 
+		local world = wt_bsp.GetCurrent().ioworld
 		local graph = wt_bsp.GetCurrent().iograph
 
 		local cmd = net.ReadUInt(MSG_BITS)
@@ -29,7 +30,7 @@ if SERVER then
 			local node = graph:GetByIndex(ent)
 			if param == "" then param = nil end
 			if node ~= nil then
-				node:FireInput(event, ply, ply, 0, param)
+				world:FireInput(node, event, ply, ply, 0, param)
 			end
 
 		elseif cmd == MSG_ENTITY_FIRE_OUTPUT then
@@ -38,7 +39,7 @@ if SERVER then
 			local event = wt_ionet.ReadIndexed()
 			local node = graph:GetByIndex(ent)
 			if node ~= nil then
-				node:FireOutput(event, ply, node:GetEntity() or ply)
+				world:FireOutput(node, event, ply, node:GetEntity() or ply)
 			end
 
 		elseif cmd == MSG_ENTITY_FIRE_OUTPUT_SPECIFIC then
@@ -47,7 +48,7 @@ if SERVER then
 			local edge = graph:FindEdgeByHash(hash)
 			local immediate = net.ReadBit() == 1
 			if edge ~= nil then
-				edge:Fire(nil, nil, immediate and 0 or nil)
+				world:FireOutputEdge(edge, nil, nil, immediate and 0 or nil)
 			end
 
 		elseif cmd == MSG_ENTITY_CANCEL_OUTPUT then
@@ -55,7 +56,7 @@ if SERVER then
 			local hash = net.ReadData(20)
 			local edge = graph:FindEdgeByHash(hash)
 			if edge ~= nil then
-				graph:GetEventQueue():Cancel( edge.to, edge.func )
+				world:GetEventQueue():Cancel( edge.to, edge.func )
 			end
 
 		end

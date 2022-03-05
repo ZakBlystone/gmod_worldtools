@@ -351,8 +351,8 @@ if SERVER then
 		end
 
 		-- Clear any pending events
-		if wt_bsp.GetCurrent().iograph then
-			wt_bsp.GetCurrent().iograph:GetEventQueue():Clear()
+		if wt_bsp.GetCurrent().ioworld then
+			wt_bsp.GetCurrent().ioworld:Reset()
 		end
 
 	end
