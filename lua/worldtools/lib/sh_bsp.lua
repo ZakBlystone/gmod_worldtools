@@ -288,7 +288,7 @@ AddProcess( "Converting Entities", function( data )
 		end
 		if t.classname then
 			local fgd = wt_iocommon.GetFGDClass(t.classname)
-			if fgd.outputs[k] then
+			if fgd and fgd.outputs[k] then
 				t.outputs = t.outputs or {}
 				local parsed = ProcessOutput(k, v)
 				if parsed then t.outputs[#t.outputs+1] = parsed end
@@ -629,7 +629,13 @@ function Init()
 
 end
 
-Init()
+local b,e = pcall(function() Init() end)
+if not b then
+
+	print("FAILED TO INIT BSP DATA")
+	ErrorNoHalt(e)
+
+end
 
 if CLIENT then
 	concommand.Add("wt_reloadbsp", function()

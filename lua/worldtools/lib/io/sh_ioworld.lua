@@ -35,6 +35,14 @@ function meta:Reset()
 
 end
 
+
+-- Called by interact system to indicate IO was manually driven
+function meta:ManualOverride( override )
+
+	self.manual_override = override
+
+end
+
 -- Handle a sunk output from the engine
 function meta:HandleOutput( caller, activator, event, param )
 
@@ -84,10 +92,16 @@ function meta:FireOutputEdge( edge, activator, caller, delay, param )
 
 	local from_ent = edge.from:GetEntity()
 
-	self.edge_counters[edge] = (self.edge_counters[edge] or 0) + 1
-	if edge.refire ~= -1 and self.edge_counters[edge] > edge.refire then return end
+	if not self.manual_override then
+
+		self.edge_counters[edge] = (self.edge_counters[edge] or 0) + 1
+		if edge.refire ~= -1 and self.edge_counters[edge] > edge.refire then return end
+
+	end
 
 	wt_ionet.AddPendingEvent( edge )
+
+	print(tostring(edge) .. " : " .. tostring(activator))
 
 	self:FireInput(
 		edge.to,

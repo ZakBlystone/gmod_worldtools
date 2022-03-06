@@ -54,7 +54,7 @@ if SERVER then
 
 		local id = entry.real:MapCreationID()
 		if id ~= -1 then
-			print("IS BSP: " .. tostring(entry.real))
+			--print("IS BSP: " .. tostring(entry.real))
 			entry.bsp_index = id - 1234
 			entry.bsp_created = true
 			return
@@ -74,7 +74,7 @@ if SERVER then
 					if num_diff < best_n then
 						best_n = num_diff
 						best = k
-						print("TARGET [" .. targetname .. "] IN BSP: " .. tostring(entry.real) .. " -> " .. num_diff)
+						--print("TARGET [" .. targetname .. "] IN BSP: " .. tostring(entry.real) .. " -> " .. num_diff)
 						entry.bsp_index = k
 						entry.bsp_created = false
 					end
@@ -89,6 +89,7 @@ if SERVER then
 
 	local function FinishAddEntity( ent, entry )
 
+		if entry == nil then return end
 		if entry.ready then return end
 		entry.ready = true
 
@@ -111,7 +112,7 @@ if SERVER then
 
 		ENTITIES[#ENTITIES+1] = ent:GetCreationID()
 
-		print(" +" .. tostring(ent) .. " indexed at [" .. ent:GetCreationID() .. "]")
+		--print(" +" .. tostring(ent) .. " indexed at [" .. ent:GetCreationID() .. "]")
 
 		timer.Remove( "_finish_ent_" .. id )
 		timer.Create( "_finish_ent_" .. id, 0, 1, function() FinishAddEntity(ent, INDEX[ id ]) end )
@@ -125,7 +126,7 @@ if SERVER then
 		if not table.RemoveByValue(ENTITIES, ent:GetCreationID()) then
 			--print(" -" .. tostring(ent) .. " removed but was not indexed [" .. ent:GetCreationID() .. "]")
 		else
-			print(" -" .. tostring(ent) .. " removed [" .. ent:GetCreationID() .. "]")
+			--print(" -" .. tostring(ent) .. " removed [" .. ent:GetCreationID() .. "]")
 		end
 
 	end
@@ -139,7 +140,7 @@ if SERVER then
 			return
 		end
 
-		print(tostring(ent) .. "." .. k .. " = " .. tostring(v))
+		--print(tostring(ent) .. "." .. k .. " = " .. tostring(v))
 
 		local fgd = wt_iocommon.GetFGDClass( ent:GetClass() )
 		if fgd == nil then print("No FGD entry for: " .. ent:GetClass()) end

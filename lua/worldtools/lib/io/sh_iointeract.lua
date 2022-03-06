@@ -21,6 +21,8 @@ if SERVER then
 		local world = wt_bsp.GetCurrent().ioworld
 		local graph = wt_bsp.GetCurrent().iograph
 
+		world:ManualOverride( true )
+
 		local cmd = net.ReadUInt(MSG_BITS)
 		if cmd == MSG_ENTITY_FIRE_INPUT then
 
@@ -60,6 +62,11 @@ if SERVER then
 			end
 
 		end
+
+		-- Temporary solution, does not propegate through IO chains
+		-- TODO: custom activator to indicate manual override
+		-- need to replace multi_manager as it doesn't persist activator
+		timer.Simple(0.1, function() world:ManualOverride( false ) end )
 
 	end)
 
