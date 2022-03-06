@@ -138,6 +138,8 @@ function meta:Link()
 
 	wt_task.Yield("sub", "linking graph")
 
+	local start = SysTime()
+
 	local hashes = {}
 
 	for node in self:Nodes() do
@@ -191,6 +193,8 @@ function meta:Link()
 	end
 
 	self:DetectCycles()
+
+	print("Link took: " .. ((SysTime() - start)*1000) .. "ms" )
 
 end
 

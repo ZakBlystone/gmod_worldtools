@@ -1,3 +1,5 @@
+--if true then return end
+
 include("sh_gc.lua")
 include("sh_statemachine.lua")
 include("sh_struct.lua")
@@ -20,6 +22,7 @@ include("sh_modal.lua")
 
 -- Needs to load before bsp
 include("io/sh_iocommon.lua")
+include("io/sh_iofgd.lua")
 include("io/sh_ioindexing.lua")
 include("io/sh_ionode.lua")
 include("io/sh_iograph.lua")

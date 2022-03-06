@@ -257,7 +257,7 @@ function meta:GetTarget()
 
 	local target = GetRenderTargetEx( idstr, width, height, sizemode, depthmode, textureflags, createflags, imageformat )
 
-	print(target)
+	--print(target)
 	g_cachemap[idstr] = target
 
 	return target
