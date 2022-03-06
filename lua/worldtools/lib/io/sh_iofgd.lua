@@ -262,6 +262,21 @@ function CategorizedIO(class, keys, out)
 
 end
 
+if SERVER then
+
+	concommand.Add("fgdclass", function(p,c,a)
+
+		if a[1] then
+
+			local class = GetFGDClass(a[1])
+			PrintTable(class)
+
+		end
+
+	end)
+
+end
+
 if CLIENT then
 
 	surface.CreateFont("ToolClassNameHuge", {

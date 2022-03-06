@@ -7,6 +7,217 @@ STATE = STATE or {
 	map_lookup = {},
 }
 
+if SERVER then
+
+	INDEX = INDEX or {}
+	ENTITIES = ENTITIES or {}
+
+	local function FixupMatchesName( fixup, name )
+
+		if fixup == name then return true end
+		local a = fixup:match("^([^&]+)&.*")
+		return a == name
+
+	end
+
+	print( FixupMatchesName("u7_t_phys&0288", "u7_t_phys") )
+
+	local ent_ignore_keys = {
+		["index"] = true,
+		["outputs"] = true,
+	}
+
+	local empty_set = {}
+	local function DiffKeys( a, b, ignore, diff )
+
+		ignore = ignore or empty_set
+		local count = 0
+		local set = {}
+		for k, v in pairs(a) do if not ignore[k] then set[k] = true end end
+		for k, v in pairs(b) do if not ignore[k] then set[k] = true end end
+		for k, _ in pairs(set) do
+			if tostring(a[k]) == tostring(b[k]) then 
+			elseif diff then
+				count = count + 1
+				diff[k] = true
+			else
+				count = count + 1
+			end
+		end
+		return count
+
+	end
+
+	local function LocateInBSP( entry )
+
+		if entry.bsp_index then return end
+
+		local id = entry.real:MapCreationID()
+		if id ~= -1 then
+			print("IS BSP: " .. tostring(entry.real))
+			entry.bsp_index = id - 1234
+			entry.bsp_created = true
+			return
+		end
+
+		local targetname = entry.keys.targetname
+		local ents = wt_bsp.GetCurrent().entities
+		if targetname then
+
+			local best_n = math.huge
+			local best = nil
+			for k,v in ipairs(ents) do
+
+				if FixupMatchesName(targetname, v.targetname) and v.origin == entry.keys.origin then
+
+					local num_diff = DiffKeys( v, entry.keys, ent_ignore_keys )
+					if num_diff < best_n then
+						best_n = num_diff
+						best = k
+						print("TARGET [" .. targetname .. "] IN BSP: " .. tostring(entry.real) .. " -> " .. num_diff)
+						entry.bsp_index = k
+						entry.bsp_created = false
+					end
+
+				end
+
+			end
+
+		end
+
+	end
+
+	local function FinishAddEntity( ent, entry )
+
+		if entry.ready then return end
+		entry.ready = true
+
+		if not IsValid(ent) then return end
+		if INDEX[ ent:GetCreationID() ] == nil then return end
+
+		LocateInBSP(entry)
+
+	end
+
+	function AddEntity( ent )
+
+		local id = ent:GetCreationID() 
+
+		INDEX[ id ] = {
+			real = ent,
+			keys = {},
+			outputs = {},
+		}
+
+		ENTITIES[#ENTITIES+1] = ent:GetCreationID()
+
+		print(" +" .. tostring(ent) .. " indexed at [" .. ent:GetCreationID() .. "]")
+
+		timer.Remove( "_finish_ent_" .. id )
+		timer.Create( "_finish_ent_" .. id, 0, 1, function() FinishAddEntity(ent, INDEX[ id ]) end )
+
+	end
+
+	function RemoveEntity( ent )
+
+		INDEX[ ent:GetCreationID() ] = nil
+
+		if not table.RemoveByValue(ENTITIES, ent:GetCreationID()) then
+			--print(" -" .. tostring(ent) .. " removed but was not indexed [" .. ent:GetCreationID() .. "]")
+		else
+			print(" -" .. tostring(ent) .. " removed [" .. ent:GetCreationID() .. "]")
+		end
+
+	end
+
+	function SetKeyValue( ent, k, v )
+
+		local id = ent:GetCreationID() 
+		local entry = INDEX[ id ]
+		if entry == nil then
+			ErrorNoHalt("No index entry for entity: " .. tostring(ent) .. "\n")
+			return
+		end
+
+		print(tostring(ent) .. "." .. k .. " = " .. tostring(v))
+
+		local fgd = wt_iocommon.GetFGDClass( ent:GetClass() )
+		if fgd == nil then print("No FGD entry for: " .. ent:GetClass()) end
+		if fgd and fgd.outputs[k] then
+
+			local parsed = wt_iocommon.ProcessOutput(k, v)
+			if parsed then 
+				entry.outputs[#entry.outputs+1] = parsed 
+			else
+				ErrorNoHalt("Failed to process output: " .. k .. " : " .. tostring(v) .. "\n")
+			end
+
+		else
+
+			if k == "origin" then
+				local x,y,z = string.match( tostring(v), "([%+%-]?%d*%.?%d+) ([%+%-]?%d*%.?%d+) ([%+%-]?%d*%.?%d+)" )
+				if x and y and z then
+					v = Vector(x,y,z)
+				else
+					v = Vector()
+				end
+			end
+			if k == "angles" then
+				local x,y,z = string.match( tostring(v), "([%+%-]?%d*%.?%d+) ([%+%-]?%d*%.?%d+) ([%+%-]?%d*%.?%d+)" )
+				v = Angle(x,y,z)
+			end
+			entry.keys[k] = v
+
+		end
+
+		timer.Remove( "_finish_ent_" .. id )
+		timer.Create( "_finish_ent_" .. id, 0, 1, function() FinishAddEntity(ent, entry) end )
+
+	end
+
+	function PrintIndex()
+
+		local ents = wt_bsp.GetCurrent().entities
+		local sorted = {}
+		for k,v in pairs(INDEX) do sorted[#sorted+1] = k end
+		table.sort(sorted)
+
+		for _,v in ipairs(sorted) do
+			local entry = INDEX[v]
+			MsgC(Color(80,255,255), tostring(v) .. " [" .. tostring(entry.real) .. "] : ", 
+				entry.real:EntIndex() == 0 and Color(255,255,255) or Color(255,80,255), tostring(entry.real:EntIndex()) .. " = " )
+
+			if entry.bsp_index and entry.bsp_created then
+
+				MsgC(Color(100,255,100), tostring(entry.bsp_index) .. "\n")
+
+			elseif entry.bsp_index then
+
+				local diff = {}
+				MsgC(Color(255,255,100), tostring(entry.bsp_index) .. "[" .. DiffKeys( ents[entry.bsp_index], entry.keys, ent_ignore_keys, diff ) ..  "]" .. "\n")
+
+				for k,v in pairs(diff) do
+					local a = ents[entry.bsp_index][k]
+					local b = entry.keys[k]
+					MsgC(Color(255,255,100), "  " .. k .. " = " .. tostring(a) .. " -> " .. tostring(b) .. "\n")
+				end
+
+			else
+
+				MsgC(Color(255,100,100), "T:\n")
+
+				PrintTable(entry.keys, 1)
+				PrintTable(entry.outputs, 1)
+
+			end
+
+		end
+
+	end
+
+end
+
+
 function EncodeDeltas(t)
 
 	local o = {}
