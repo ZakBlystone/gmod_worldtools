@@ -37,6 +37,7 @@ function ProcessOutput( event, str )
 	output.param = args[4]  -- parameter passed to target
 	output.delay = args[5]  -- how long to wait
 	output.refire = args[6] -- max times to refire
+	output.raw = {event, str}
 
 	return output
 

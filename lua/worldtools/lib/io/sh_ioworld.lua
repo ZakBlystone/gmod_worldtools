@@ -101,7 +101,7 @@ function meta:FireOutputEdge( edge, activator, caller, delay, param )
 
 	wt_ionet.AddPendingEvent( edge )
 
-	print(tostring(edge) .. " : " .. tostring(activator))
+	--print(tostring(edge) .. " : " .. tostring(activator))
 
 	self:FireInput(
 		edge.to,

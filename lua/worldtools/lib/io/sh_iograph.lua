@@ -134,61 +134,66 @@ function meta:NodeInputs( node )
 
 end
 
+function meta:LinkNode( node, hashes )
+
+	local name = node:GetName()
+	for _, output in ipairs(node:GetRawOutputs()) do
+
+		for target in self:NodesByName(output.target) do
+
+			local eventData = {
+				from = node,
+				to = target,
+				event = output.event,
+				func = output.func,
+				param = output.param,
+				delay = (output.delay or 0),
+				refire = tonumber(output.refire),
+			}
+
+			setmetatable(eventData, eventDataMeta)
+			eventData:ComputeHash()
+
+			print(eventData)
+
+			local hash = eventData:GetHash()
+
+			if hashes[hash] then
+				print("DUPLICATE IO: " .. tostring(eventData))
+				continue
+			end
+			
+			hashes[hash] = true
+
+			self.edges[#self.edges+1] = eventData
+
+			wt_task.YieldPer(10, "progress", 1)
+
+		end
+
+	end
+
+	if node.parentname then
+
+		for target in self:NodesByName(node.parentname) do
+			node.parent = target
+			break
+		end
+
+	end
+
+end
+
 function meta:Link()
 
 	wt_task.Yield("sub", "linking graph")
 
 	local start = SysTime()
-
 	local hashes = {}
 
 	for node in self:Nodes() do
 
-		local name = node:GetName()
-		for _, output in ipairs(node:GetRawOutputs()) do
-
-			for target in self:NodesByName(output.target) do
-
-				local eventData = {
-					from = node,
-					to = target,
-					event = output.event,
-					func = output.func,
-					param = output.param,
-					delay = (output.delay or 0),
-					refire = tonumber(output.refire),
-				}
-
-				setmetatable(eventData, eventDataMeta)
-				eventData:ComputeHash()
-
-				print(eventData)
-
-				local hash = eventData:GetHash()
-
-				if hashes[hash] then
-					print("DUPLICATE IO: " .. tostring(eventData))
-					continue
-				end
-				
-				hashes[hash] = true
-
-				self.edges[#self.edges+1] = eventData
-
-				wt_task.YieldPer(10, "progress", 1)
-
-			end
-
-		end
-
-		if node.parentname then
-
-			for target in self:NodesByName(node.parentname) do
-				node.parent = target
-				break
-			end
-
-		end
+		self:LinkNode( node, hashes )
 
 	end
 
