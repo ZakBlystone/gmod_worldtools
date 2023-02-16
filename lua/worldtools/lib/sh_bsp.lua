@@ -284,6 +284,7 @@ AddProcess( "Converting Entities", function( data )
 	local str = data[LUMP_ENTITIES]
 	local sm = wt_statemachine.New()
 	local sm2 = wt_statemachine.New()
+	print(str)
 
 	local match = _T( function(ch, char) return ch == char end, 1 )
 	local smstate = _T( function(ch, state) return sm._ == state end, 1 )
@@ -431,7 +432,7 @@ LUMPS_DEFAULT_CLIENT =
 	LUMP_PLANES,				--Plane equations for map geometry
 	LUMP_BRUSHES,				--Brushes
 	LUMP_BRUSHSIDES,			--Sides of brushes
-	LUMP_GAME_LUMP,				--Static props and detail props
+	--LUMP_GAME_LUMP,				--Static props and detail props
 	LUMP_NODES,					--Spatial partitioning nodes
 	LUMP_LEAFS,					--Spatial partitioning leafs
 	LUMP_MODELS,				--Brush models (trigger_* / func_*)

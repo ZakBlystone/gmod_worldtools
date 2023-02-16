@@ -48,7 +48,7 @@ end
 
 local function OutputString( output )
 
-	return ("%s>%s"):format(output.raw[1], output.raw[2])
+	return output.raw
 
 end
 
@@ -58,18 +58,98 @@ local function DiffOutputs( a, b, diff )
 	local aset = {}
 	local bset = {}
 
+	if #a == #b then
+		local changed = false
+		for i=1, #a do 
+			if OutputString(a[i]) ~= OutputString(b[i]) then
+				changed = true
+			end 
+		end
+		if not changed then return end
+	end
+
 	for _,v in ipairs(a) do aset[OutputString(v)] = true end
 	for _,v in ipairs(b) do bset[OutputString(v)] = true end
 
-	for _,v in ipairs(a) do
+	local add, rmv = {}, {}
+	for k,v in ipairs(a) do
 		local str = OutputString(v)
-		if not bset[str] then diff[#diff+1] = "-" .. str end
+		if not bset[str] then rmv[#rmv+1] = {k, v} end
 	end
 
 	for _,v in ipairs(b) do
 		local str = OutputString(v)
-		if not aset[str] then diff[#diff+1] = "+" .. str end
+		if not aset[str] then add[#add+1] = v end
 	end
+
+	for _,v in ipairs(add) do
+		if #rmv > 0 then
+			diff[#diff+1] = rmv[1][1] .. "|" .. OutputString(v)
+			table.remove(rmv, 1)
+		else
+			diff[#diff+1] = "+" .. OutputString(v)
+		end
+	end
+
+	for _,v in ipairs(rmv) do
+		diff[#diff+1] = "-" .. OutputString(v[2])
+	end
+
+end
+
+local function ApplyOutputDiff( t, diff )
+
+	local function ConvertOutput(str)
+		local ev, data = str:match("^([^>]+)>(.*)")
+		return wt_iocommon.ProcessOutput(ev, data)
+	end
+
+	for _,v in ipairs(diff) do
+
+		if v[1] == "+" then
+			t[#t+1] = ConvertOutput(v:sub(2,-1))
+		elseif v[1] == "-" then
+			local str = v:sub(2,-1)
+			for i=1, #t do
+				if t[i].raw == str then
+					table.remove(t, i)
+					break
+				end
+			end
+		else
+			local n, d = v:match("^(%d+)|(.*)")
+			n = tonumber(n)
+			t[n] = ConvertOutput(d)
+		end
+
+	end
+
+end
+
+if SERVER then
+
+	local a = {
+		{raw = "OnTest01>target0,Run,,0,-1"},
+		{raw = "OnTest02>target0,Run,,0,-1"},
+		{raw = "OnTest03>target0,Run,,0,-1"},
+		{raw = "OnTest04>target0,Run,,0,-1"},
+	}
+
+	local b = {
+		{raw = "OnTest03>target0,Run,,0,-1"},
+		{raw = "OnTest05>target0,Run,,0,-1"},
+		{raw = "OnTest06>target0,Run,,0,-1"},
+		{raw = "OnTest04>target0,Run,,0,-1"},
+	}
+
+	local diff = {}
+	DiffOutputs(a,b,diff)
+
+	print("Diff:")
+	PrintTable(diff)
+
+	ApplyOutputDiff( a, diff )
+	PrintTable(a)
 
 end
 
