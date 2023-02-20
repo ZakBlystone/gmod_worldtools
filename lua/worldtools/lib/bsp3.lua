@@ -1247,28 +1247,30 @@ local function loadBSPData( handle, requested, params )
 
     print("BSP Version: " .. header.version)
 
-    -- TODO: somehow determine if this is a L4D2 map
-    -- For some reason, they swizzled the lump fields for that game
-    if header.version == 21 and false then
+    local is_l4d2 = false
+    for i=0, 63 do
+        local lump = {
+            offset = int32(),
+            length = int32(),
+            version = int32(),
+            uncompressedSize = int32(),
+        }
+        
+        header.lumps[i] = lump
 
+        -- L4D2 maps have swizzled lump struct members
+        -- This is detectable by finding any non-zero-length lump having an invalid offset of 0
+        if header.version == 21 and lump.length > 0 and lump.offset == 0 then is_l4d2 = true end
+    end
+
+    if is_l4d2 then
+
+        print("BSP IS L4D2, Swizzling lumps...")
         for i=0, 63 do
-            header.lumps[i] = {
-                version = int32(),
-                offset = int32(),
-                length = int32(),
-                uncompressedSize = int32(),
-            }
-        end
 
-    else
+            local lump = header.lumps[i]
+            lump.version, lump.offset, lump.length = lump.offset, lump.length, lump.version
 
-        for i=0, 63 do
-            header.lumps[i] = {
-                offset = int32(),
-                length = int32(),
-                version = int32(),
-                uncompressedSize = int32(),
-            }
         end
 
     end
