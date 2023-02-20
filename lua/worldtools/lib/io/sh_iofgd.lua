@@ -150,6 +150,8 @@ function parseFGD( fgd, path )
 	if f then
 		str = f:Read( f:Size() )
 		parseFGDString(fgd, str)
+	else
+		print("FGD file not found: " .. tostring(fgd))
 	end
 
 end
@@ -204,6 +206,8 @@ parseFGD("bin/halflife2.fgd")
 parseFGD("bin/garrysmod.fgd")
 
 include("../fgd/sh_halflife_source.lua")
+include("../fgd/sh_tf.lua")
+include("../fgd/sh_left4dead2.lua")
 
 inheritBaseClasses(classes)
 
@@ -425,7 +429,10 @@ if CLIENT then
 	function GetToolMaterial(class)
 
 		local tex = tool_textures[class]
-		if tex == nil then print("NO TOOL MATERIAL FOR: " .. tostring(class)) return end
+		if tex == nil then print("NO TOOL MATERIAL FOR: " .. tostring(class)) 
+			if class ~= "trigger_multiple" then return GetToolMaterial("trigger_multiple") end
+			return 
+		end
 		--if tex ~= nil then return tex:GetUnlitMaterial() end
 
 		return CreateMaterial("io_brush_tooltex_" .. class, "UnlitGeneric", {

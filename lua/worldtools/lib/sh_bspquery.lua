@@ -229,7 +229,7 @@ local function buildFilterMap(filter, dest)
 end
 
 local filterMap = {}
-local meta = getmetatable( map )
+local meta = bsp3.GetMetaTable() --getmetatable( map )
 local trmtx = Matrix()
 local iposvec = Vector()
 local idirvec = Vector()

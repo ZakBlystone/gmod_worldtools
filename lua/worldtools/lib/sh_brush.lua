@@ -11,14 +11,14 @@ SIDE_ON = 3
 local meta = {}
 meta.__index = meta
 
+function GetSideMetatable() return meta end
+
 --winding is optional
-function Side( plane, winding ) return setmetatable({}, meta):Init( plane, winding ) end
+function Side( plane, winding ) return setmetatable({ plane = plane, winding = winding }, meta):Init() end
 
 function meta:Init( plane, winding )
 
-	self.plane = plane
-	self.winding = winding
-	self.bevel = false
+	if self.bevel == nil then self.bevel = false end
 	return self
 
 end
@@ -44,6 +44,7 @@ end
 local meta = {}
 meta.__index = meta
 
+function GetBrushMetatable() return meta end
 function Brush() return setmetatable({}, meta):Init() end
 
 function meta:Init()
