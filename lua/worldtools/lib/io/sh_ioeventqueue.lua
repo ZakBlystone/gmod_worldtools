@@ -37,6 +37,9 @@ function meta:Clear()
 
 end
 
+-- Cycle detections currently has false positives
+-- Probably impossible to detect reliably as it depends on hidden entity state
+-- Look into activator based detection
 function meta:DetectCycle(node, func)
 
 	for i=1, #self.pending do
@@ -88,7 +91,7 @@ function meta:AddRaw(node, func, activator, caller, delay, param)
 
 	--print("ADD INPUT: " .. node:GetName() .. "." .. func .. "(" .. tostring(param) .. ")")
 
-	if self:DetectCycle(node, func) then return end
+	--if self:DetectCycle(node, func) then return end
 
 	local event = nil
 	for i=1, #self.pending do
