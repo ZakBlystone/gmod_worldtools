@@ -26,6 +26,7 @@ local argKVMatch = "(%w+)%(([^%)]*)%)"
 local argMultiMatch = "[^,%s]+"
 local kvMatchFull = [[(%w+)%((%w+)%)%s*:%s*"([^"]*)"%s*:%s*"([^"]*)"]]
 local kvMatchPartial = [[(%w+)%((%w+)%)%s*:%s*"([^"]*)"]]
+local kvMatchAssign = [[(%w+)%((%w+)%)%s*=]]
 
 local function tablesEqual(a,b)
 
@@ -133,6 +134,14 @@ function parseFGDString( filename, str, newline )
 					targetClass.keyvalues[key] = {
 						type = type, 
 						desc = desc
+					}
+					continue
+				end
+
+				local key, type = x:match(kvMatchAssign)
+				if key then
+					targetClass.keyvalues[key] = {
+						type = type, 
 					}
 					continue
 				end

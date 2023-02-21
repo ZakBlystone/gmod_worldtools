@@ -15,9 +15,11 @@ include("sh_statusui.lua")
 include("sh_poly.lua")
 include("sh_brush.lua")
 include("sh_modal.lua")
+include("sh_lexer.lua")
 
 -- Needs to load before bsp
 include("io/sh_iocommon.lua")
+include("io/sh_iofgdparse.lua")
 include("io/sh_iofgd.lua")
 include("io/sh_ioindexing.lua")
 include("io/sh_ionode.lua")
