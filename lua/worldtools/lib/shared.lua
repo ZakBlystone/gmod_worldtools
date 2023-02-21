@@ -1,7 +1,6 @@
 --if true then return end
 
 include("sh_gc.lua")
-include("sh_struct.lua")
 include("sh_task.lua")
 include("sh_irt.lua")
 include("sh_mesh.lua")
@@ -15,8 +14,6 @@ include("sh_statusui.lua")
 
 include("sh_poly.lua")
 include("sh_brush.lua")
-include("sh_phy.lua")
-include("sh_bsptypes.lua")
 include("sh_modal.lua")
 
 -- Needs to load before bsp
