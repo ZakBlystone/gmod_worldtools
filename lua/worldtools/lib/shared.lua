@@ -1,7 +1,6 @@
 --if true then return end
 
 include("sh_gc.lua")
-include("sh_statemachine.lua")
 include("sh_struct.lua")
 include("sh_task.lua")
 include("sh_irt.lua")
